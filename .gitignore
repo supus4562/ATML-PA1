@@ -34,11 +34,13 @@ ENV/
 *.zip
 
 # ── Model checkpoints ─────────────────────────────────────────────────────────
-task1/results/
-task2/results/
-task3/results/
-task4/results/
-task4/cache/
+# Results folders were previously ignored; allow committed results when needed.
+# If you want to keep results local, re-add these lines or use a more specific ignore.
+# task1/results/
+# task2/results/
+# task3/results/
+# task4/results/
+# task4/cache/
 
 # ── OS / editor ───────────────────────────────────────────────────────────────
 .DS_Store
