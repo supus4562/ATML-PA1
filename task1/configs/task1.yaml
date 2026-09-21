@@ -21,6 +21,7 @@ cue_conflicts:
   content_weight: 1.0
   n_steps: 300
   lr: 0.01
+  batch_size: 128
 
 translation:
   displacements: [0, 8, 16, 32]

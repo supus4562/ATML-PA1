@@ -318,7 +318,7 @@ def main() -> None:
     print("[task1] Generating AdaIN cue conflicts ...")
     pairs = [
         ("Abyssinian", "Bengal"), ("Beagle", "Boxer"), ("Chihuahua", "Pug"),
-        ("Persian", "Siamese"), ("Pomeranian", "Shiba Inu"),
+        ("Persian", "Siamese"), ("Samoyed", "Keeshond"),
     ]
     conflicts = generate_cue_conflicts(
         test_dataset, subset_indices, pairs, config["cue_conflicts"], device
@@ -463,8 +463,9 @@ def main() -> None:
             cc_ds   = PILDataset(cc_imgs, cc_labs, transform)
             cc_loader = DataLoader(cc_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
             f_cc, _ = model.extract_features(cc_loader)
-            content_idxs = [subset_indices.index(c["content_idx"])
-                            for c in conflicts if c["content_idx"] in subset_indices]
+            subset_idx_map = {v: i for i, v in enumerate(subset_indices)}
+            content_idxs = [subset_idx_map[c["content_idx"]]
+                            for c in conflicts if c["content_idx"] in subset_idx_map]
             if content_idxs:
                 f_clean_cc = f_clean[content_idxs[:len(f_cc)]]
                 s_cc = cosine_stability(f_clean_cc, f_cc[:len(f_clean_cc)])

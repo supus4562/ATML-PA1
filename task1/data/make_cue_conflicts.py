@@ -188,7 +188,7 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
     median_s_loss = np.median(all_s_loss)
     accepted = []
     for r in results:
-        if r['style_loss'] <= 3 * median_s_loss and r['ssim'] >= 0.15:
+        if r['style_loss'] <= 3 * median_s_loss and r['ssim'] >= 0.05:
             accepted.append(r)
             
     os.makedirs('task1/results', exist_ok=True)
