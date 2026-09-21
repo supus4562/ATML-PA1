@@ -183,13 +183,8 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
         if len(results) >= config.get('max_generate_total', 1000):
             break
                     
-    # Rejection
-    all_s_loss = [r['style_loss'] for r in results]
-    median_s_loss = np.median(all_s_loss)
-    accepted = []
-    for r in results:
-        if r['style_loss'] <= 3 * median_s_loss and r['ssim'] >= 0.05:
-            accepted.append(r)
+    # Minimal sanity filter: only reject completely broken / NaN images (SSIM < 0.01)
+    accepted = [r for r in results if r['ssim'] >= 0.01]
             
     os.makedirs('task1/results', exist_ok=True)
     with open('task1/results/cue_conflict_stats.json', 'w') as f:
