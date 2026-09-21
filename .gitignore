@@ -28,7 +28,7 @@ ENV/
 *.ipynb
 
 # ── Data (downloaded automatically) ──────────────────────────────────────────
-data/
+/data/
 *.tar.gz
 *.tar.bz2
 *.zip
@@ -53,3 +53,4 @@ wandb/
 mlruns/
 runs/
 logs/
+REPORT_NOTES.md
