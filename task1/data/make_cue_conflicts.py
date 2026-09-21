@@ -116,31 +116,32 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
         style_batch = torch.stack(style_tensors).to(device)
         
         with torch.no_grad():
-            # Use AMP for forward passes to reduce memory/compute on CUDA
-            use_amp = (device.type == 'cuda')
-            if use_amp:
-                with torch.amp.autocast(device_type='cuda'):
-                    content_feats = vgg(content_batch)
-                    style_feats = vgg(style_batch)
-            else:
-                content_feats = vgg(content_batch)
-                style_feats = vgg(style_batch)
-            
-        opt_batch = content_batch.clone().requires_grad_(True)
-        optimizer = optim.Adam([opt_batch], lr=config['lr'])
-        
-        for step in range(int(config.get('n_steps', 200))):
-            optimizer.zero_grad()
-            # AMP for optimization forward as well
+            # AMP only for read-only feature extraction — safe here
             if device.type == 'cuda':
                 with torch.amp.autocast(device_type='cuda'):
-                    opt_feats = vgg(opt_batch)
+                    content_feats_amp = vgg(content_batch)
+                    style_feats_amp   = vgg(style_batch)
+                # Cast back to float32 — the optimization loop MUST run in float32
+                # because style_weight=1e6 overflows float16 and produces NaN gradients
+                content_feats = [f.float() for f in content_feats_amp]
+                style_feats   = [f.float() for f in style_feats_amp]
             else:
-                opt_feats = vgg(opt_batch)
+                content_feats = vgg(content_batch)
+                style_feats   = vgg(style_batch)
+
+        opt_batch = content_batch.float().clone().requires_grad_(True)
+        optimizer = optim.Adam([opt_batch], lr=config['lr'])
+
+        for step in range(int(config.get('n_steps', 300))):
+            optimizer.zero_grad()
+            # NO AMP here — large style_weight causes float16 overflow → NaN gradients
+            opt_feats = vgg(opt_batch)
             c_loss = calc_content_loss(opt_feats, content_feats)
             s_loss = calc_style_loss(opt_feats, style_feats)
             loss = float(config['content_weight']) * c_loss + float(config['style_weight']) * s_loss
             loss.backward()
+            # Gradient clipping as a safety net against any remaining instability
+            torch.nn.utils.clip_grad_norm_([opt_batch], max_norm=1.0)
             optimizer.step()
             
         # Post-process
