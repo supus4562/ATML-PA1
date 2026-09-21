@@ -120,7 +120,7 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
                     
                     c_loss = calc_content_loss(opt_feats, content_feats)
                     s_loss = calc_style_loss(opt_feats, style_feats)
-                    loss = config['content_weight'] * c_loss + config['style_weight'] * s_loss
+                    loss = float(config['content_weight']) * c_loss + float(config['style_weight']) * s_loss
                     loss.backward()
                     optimizer.step()
                 

@@ -17,7 +17,7 @@ training:
 cue_conflicts:
   n_pairs: 5
   target_total: 200
-  style_weight: 1.0e6
+  style_weight: 1000000.0
   content_weight: 1.0
   n_steps: 300
   lr: 0.01
