@@ -10,7 +10,7 @@ def run_tsne(features_clean, features_transformed, labels, backbone_name, output
     tsne = TSNE(
         n_components=2,
         perplexity=config['tsne']['perplexity'],
-        n_iter=config['tsne']['n_iter'],
+        max_iter=config['tsne']['n_iter'],  # renamed from n_iter in scikit-learn 1.5+
         random_state=config['tsne']['random_state']
     )
 
