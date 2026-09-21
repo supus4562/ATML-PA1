@@ -292,6 +292,7 @@ def main() -> None:
     test_dataset  = OxfordIIITPet(root=config["data_root"], split="test",  download=True)
 
     config["classes"] = train_dataset.classes
+    config["training"]["classes"] = train_dataset.classes
     subset_indices = make_balanced_subset(
         test_dataset, config["subset"]["n_per_class"], config["seed"]
     )
