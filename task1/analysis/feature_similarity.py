@@ -35,3 +35,10 @@ def compute_all_stabilities(backbone, clean_pil_images, transform_fn, batch_size
     features_trans, _ = backbone.extract_features(trans_loader)
     
     return cosine_stability(features_clean, features_trans), features_clean, features_trans
+
+def linear_cka(X, Y):
+    X = X - X.mean(axis=0)
+    Y = Y - Y.mean(axis=0)
+    num = np.linalg.norm(X.T @ Y, ord='fro') ** 2
+    den = np.linalg.norm(X.T @ X, ord='fro') * np.linalg.norm(Y.T @ Y, ord='fro')
+    return float(num / den) if den > 0 else 0.0

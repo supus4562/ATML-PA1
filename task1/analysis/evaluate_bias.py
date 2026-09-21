@@ -51,7 +51,14 @@ def evaluate_cue_conflicts(model, conflicts, config):
         return {'shape_bias': 0, 'coverage': 0}
         
     transform = getattr(model, 'get_transform', lambda: model.transform)()
-    classes = ['airplane', 'bird', 'car', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck', 'frog']
+    # We assume 'classes' is passed via config or we extract it from model predictions if available.
+    # To prevent breakage, we'll pass classes dynamically if needed, or rely on model class names.
+    classes = config.get('classes', None)
+    if classes is None:
+        # Fallback to model's default classes if available
+        classes = getattr(model, 'classes', None)
+        # Or just use the string predictions directly if model.predict returns strings
+
     
     imgs = [c['stylized_pil'] for c in conflicts]
     ds = PILDataset(imgs, [0]*len(imgs), transform)

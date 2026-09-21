@@ -22,7 +22,7 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
-from torchvision.datasets import STL10
+from torchvision.datasets import OxfordIIITPet
 
 _REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _REPO not in sys.path:
@@ -230,11 +230,40 @@ def plot_mean_max_conf(metrics: dict, out_dir: str) -> None:
     savefig(os.path.join(out_dir, "figures", "step1_confidence.png"), fig)
 
 
+
+def plot_cka_heatmap(features_dict: dict, title: str, out_path: str) -> None:
+    from task1.analysis.feature_similarity import linear_cka
+    names = list(features_dict.keys())
+    n = len(names)
+    cka_matrix = np.zeros((n, n))
+    for i, n1 in enumerate(names):
+        for j, n2 in enumerate(names):
+            if i <= j:
+                v = linear_cka(features_dict[n1], features_dict[n2])
+                cka_matrix[i, j] = v
+                cka_matrix[j, i] = v
+    
+    fig, ax = plt.subplots(figsize=(6, 5))
+    cax = ax.imshow(cka_matrix, cmap='Blues', vmin=0, vmax=1)
+    fig.colorbar(cax)
+    ax.set_xticks(np.arange(n))
+    ax.set_yticks(np.arange(n))
+    ax.set_xticklabels(names)
+    ax.set_yticklabels(names)
+    ax.set_title(title)
+    
+    for i in range(n):
+        for j in range(n):
+            ax.text(j, i, f"{cka_matrix[i, j]:.2f}", ha="center", va="center", color="black" if cka_matrix[i,j] < 0.5 else "white")
+            
+    plt.tight_layout()
+    savefig(out_path, fig)
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Task 1 — Inductive Biases")
-    parser.add_argument("--data_root",  default="./data/stl10")
+    parser.add_argument("--data_root",  default="./data/oxford-iiit-pet")
     parser.add_argument("--output_dir", default="task1/results")
     parser.add_argument("--config",     default="task1/configs/task1.yaml")
     parser.add_argument("--seed", type=int, default=6304)
@@ -254,10 +283,11 @@ def main() -> None:
     print(f"[task1] device={device}")
 
     # ── Datasets ──────────────────────────────────────────────────────────────
-    print("[task1] Downloading / loading STL-10 ...")
-    train_dataset = STL10(root=config["data_root"], split="train", download=True)
-    test_dataset  = STL10(root=config["data_root"], split="test",  download=True)
+    print("[task1] Downloading / loading Oxford-IIIT Pet ...")
+    train_dataset = OxfordIIITPet(root=config["data_root"], split="trainval", download=True)
+    test_dataset  = OxfordIIITPet(root=config["data_root"], split="test",  download=True)
 
+    config["classes"] = train_dataset.classes
     subset_indices = make_balanced_subset(
         test_dataset, config["subset"]["n_per_class"], config["seed"]
     )
@@ -276,8 +306,8 @@ def main() -> None:
     # ── Step 3 prep: cue conflicts (slow — done once for all models) ───────────
     print("[task1] Generating AdaIN cue conflicts ...")
     pairs = [
-        ("airplane", "ship"), ("car", "truck"), ("dog", "horse"),
-        ("bird", "monkey"), ("deer", "frog"),
+        ("Abyssinian", "Bengal"), ("Beagle", "Boxer"), ("Chihuahua", "Pug"),
+        ("Persian", "Siamese"), ("Pomeranian", "Shiba Inu"),
     ]
     conflicts = generate_cue_conflicts(
         test_dataset, subset_indices, pairs, config["cue_conflicts"], device
@@ -294,6 +324,7 @@ def main() -> None:
         "step5_patch":         {},
         "step6_stability":     {},
     }
+    features_for_cka = {"clean": {}, "gray": {}, "patch": {}, "translation": {}, "cue_conflict": {}}
 
     # ── Per-model evaluation ──────────────────────────────────────────────────
     for model_name in MODEL_NAMES:
@@ -323,11 +354,10 @@ def main() -> None:
         if model_name == "CLIP":
             print("[task1]   → CLIP zero-shot ...")
             zs = CLIPZeroShot(device)
-            STL10_CLASSES = ["airplane", "bird", "car", "deer", "dog",
-                             "horse", "monkey", "ship", "truck", "frog"]
+            PET_CLASSES = train_dataset.classes
             clean_ds_zs = PILDataset(clean_pil_images, labels_arr, transform)
             zs_loader   = DataLoader(clean_ds_zs, batch_size=64, shuffle=False)
-            zs_preds, zs_probs, zs_lbls = zs.predict(zs_loader, STL10_CLASSES)
+            zs_preds, zs_probs, zs_lbls = zs.predict(zs_loader, PET_CLASSES)
             from sklearn.metrics import accuracy_score, f1_score
             metrics["step1_clip_zeroshot"] = {
                 "accuracy":      float(accuracy_score(zs_lbls, zs_preds)),
@@ -380,6 +410,8 @@ def main() -> None:
         gray_loader = DataLoader(gray_ds, batch_size=64, shuffle=False)
         f_clean, _ = model.extract_features(clean_loader)
         f_gray, _  = model.extract_features(gray_loader)
+        features_for_cka["clean"][model_name] = f_clean
+        features_for_cka["gray"][model_name] = f_gray
 
         from task1.analysis.feature_similarity import cosine_stability
         s_gray = cosine_stability(f_clean, f_gray)
@@ -389,6 +421,7 @@ def main() -> None:
         patch_ds   = PILDataset(patch_imgs, labels_arr, transform)
         patch_loader = DataLoader(patch_ds, batch_size=64, shuffle=False)
         f_patch, _ = model.extract_features(patch_loader)
+        features_for_cka["patch"][model_name] = f_patch
         s_patch = cosine_stability(f_clean, f_patch)
 
         # Translation δ=32 (average over 4 directions)
@@ -398,6 +431,7 @@ def main() -> None:
             trans_ds   = PILDataset(trans_imgs, labels_arr, transform)
             trans_loader = DataLoader(trans_ds, batch_size=64, shuffle=False)
             f_trans, _ = model.extract_features(trans_loader)
+            features_for_cka["translation"][model_name] = f_trans
             s_trans_list.append(cosine_stability(f_clean, f_trans))
         s_trans = float(np.mean(s_trans_list))
 
@@ -410,10 +444,10 @@ def main() -> None:
             f_cc, _ = model.extract_features(cc_loader)
             # Use matching clean features (subset of f_clean by content_idx)
             content_idxs = [subset_indices.index(c["content_idx"])
-                            for c in conflicts if c["content_idx"] in subset_indices]
-            if content_idxs:
+                            for c in conflicts if c["content_idx"] in subset_indices]            if content_idxs:
                 f_clean_cc = f_clean[content_idxs[:len(f_cc)]]
                 s_cc = cosine_stability(f_clean_cc, f_cc[:len(f_clean_cc)])
+                features_for_cka["cue_conflict"][model_name] = f_cc[:len(f_clean_cc)]
             else:
                 s_cc = 0.0
         else:
@@ -446,6 +480,14 @@ def main() -> None:
     plot_translation(metrics["step4_translation"],      config["output_dir"])
     plot_patch_shuffle(metrics["step5_patch"],          config["output_dir"])
     plot_stability(metrics["step6_stability"],          config["output_dir"])
+
+    print("[task1] Generating CKA heatmaps ...")
+    plot_cka_heatmap(features_for_cka["clean"], "CKA - Clean Baseline", os.path.join(config["output_dir"], "figures", "cka_clean.png"))
+    plot_cka_heatmap(features_for_cka["gray"], "CKA - Color Bias (Grayscale)", os.path.join(config["output_dir"], "figures", "cka_gray.png"))
+    plot_cka_heatmap(features_for_cka["patch"], "CKA - Patch Shuffle", os.path.join(config["output_dir"], "figures", "cka_patch.png"))
+    plot_cka_heatmap(features_for_cka["translation"], "CKA - Translation (32px right)", os.path.join(config["output_dir"], "figures", "cka_translation.png"))
+    if features_for_cka["cue_conflict"]:
+        plot_cka_heatmap(features_for_cka["cue_conflict"], "CKA - Shape vs Texture", os.path.join(config["output_dir"], "figures", "cka_cue_conflict.png"))
 
     # ── Summary CSV ───────────────────────────────────────────────────────────
     summary_rows = []

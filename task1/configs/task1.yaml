@@ -1,5 +1,5 @@
 seed: 6304
-data_root: ./data/stl10
+data_root: ./data/oxford-iiit-pet
 output_dir: task1/results
 
 subset:
