@@ -1,0 +1,15 @@
+method: proser
+seed: 6304
+data_root: ./data/cifar
+output_dir: task4/results
+batch_size: 128
+lr: 1.0e-3
+momentum: 0.9
+weight_decay: 5.0e-4
+n_epochs: 50
+val_fraction: 0.1
+vanilla_checkpoint: task4/results/vanilla_checkpoint.pth
+checkpoint_path: task4/results/proser_checkpoint.pth
+n_dummy: 5
+beta: 1.0
+gamma: 0.1

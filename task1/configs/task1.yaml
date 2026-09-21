@@ -1,0 +1,30 @@
+seed: 6304
+data_root: ./data/stl10
+output_dir: task1/results
+
+subset:
+  n_per_class: 50
+
+training:
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  max_epochs: 50
+  patience: 5
+  batch_size: 64
+
+cue_conflicts:
+  n_pairs: 5
+  target_total: 200
+  style_weight: 1.0e6
+  content_weight: 1.0
+  n_steps: 300
+  lr: 0.01
+
+translation:
+  displacements: [0, 8, 16, 32]
+  directions: [up, down, left, right]
+
+tsne:
+  perplexity: 30
+  n_iter: 1000
+  random_state: 6304

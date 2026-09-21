@@ -1,0 +1,13 @@
+method: gcsc
+seed: 6304
+data_root: ./data/cifar
+output_dir: task4/results
+batch_size: 128
+lr: 0.1
+momentum: 0.9
+weight_decay: 5.0e-4
+n_epochs: 100
+val_fraction: 0.1
+checkpoint_path: task4/results/gcsc_checkpoint.pth
+randaugment_ops: 2
+randaugment_mag: 9

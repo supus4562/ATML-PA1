@@ -1,0 +1,12 @@
+method: sam
+seed: 6304
+output_dir: task3/results
+pacs_root: null
+rho: 0.05
+source_domains: [photo, art_painting, cartoon]
+n_classes: 7
+batch_size_per_domain: 8
+max_epochs: 30
+patience: 5
+lr: 1.0e-4
+weight_decay: 1.0e-4

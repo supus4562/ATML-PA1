@@ -1,0 +1,5 @@
+method: erm
+seed: 6304
+output_dir: task3/results
+pacs_root: null
+erm_checkpoint: task2/results/source_only_checkpoint.pth

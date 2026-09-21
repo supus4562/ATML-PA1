@@ -1,0 +1,55 @@
+# ── Private / study files (not submitted) ─────────────────────────────────────
+SETUP.md
+LEARN.md
+generate_task2.py
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── Data (downloaded automatically) ──────────────────────────────────────────
+data/
+*.tar.gz
+*.tar.bz2
+*.zip
+
+# ── Model checkpoints ─────────────────────────────────────────────────────────
+task1/results/
+task2/results/
+task3/results/
+task4/results/
+task4/cache/
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Wandb / MLflow / tensorboard ─────────────────────────────────────────────
+wandb/
+mlruns/
+runs/
+logs/

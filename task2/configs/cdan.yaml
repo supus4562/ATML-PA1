@@ -1,0 +1,4 @@
+defaults: [base]
+method: cdan
+combined_dim: 3584
+checkpoint_path: task2/results/cdan_checkpoint.pth

@@ -1,0 +1,13 @@
+seed: 6304
+output_dir: task2/results
+pacs_root: null
+source_domains: [photo, art_painting, cartoon]
+target_domain: sketch
+n_classes: 7
+feature_dim: 512
+batch_size_per_domain: 8
+target_batch_size: 24
+max_epochs: 30
+patience: 5
+lr: 1.0e-4
+weight_decay: 1.0e-4

@@ -1,0 +1,5 @@
+defaults: [base]
+method: dan
+lambda_mmd: 1.0
+kernel_scales: [0.5, 1.0, 2.0]
+checkpoint_path: task2/results/dan_checkpoint.pth
