@@ -59,11 +59,23 @@ class BackboneExtractor:
 
     def train_linear_head(self, train_loader, val_loader, config):
         feat_dim = 2048 if self.name == "ResNet-50" else (768 if self.name == "ViT-B/16" else 512)
-        num_classes = len(config.get("classes", range(10)))
+        num_classes = len(config.get("classes", range(37)))
         self.head = nn.Linear(feat_dim, num_classes).to(self.device)
         
         optimizer = torch.optim.AdamW(self.head.parameters(), lr=config.get('lr', 1e-3), weight_decay=config.get('weight_decay', 1e-4))
         criterion = nn.CrossEntropyLoss()
+        
+        # PRE-EXTRACT FEATURES ONCE TO GPU (MASSIVE SPEEDUP)
+        train_feats, train_labels = self.extract_features(train_loader)
+        val_feats, val_labels = self.extract_features(val_loader)
+        
+        train_feats = torch.tensor(train_feats, device=self.device)
+        train_labels = torch.tensor(train_labels, dtype=torch.long, device=self.device)
+        val_feats = torch.tensor(val_feats, device=self.device)
+        val_labels = torch.tensor(val_labels, dtype=torch.long, device=self.device)
+        
+        batch_size = config.get("batch_size", 1024)
+        dataset_size = train_feats.shape[0]
         
         best_acc = 0
         patience = config.get('patience', 5)
@@ -71,18 +83,11 @@ class BackboneExtractor:
         
         for epoch in tqdm(range(config.get('max_epochs', 50)), desc=f'Training {self.name} head'):
             self.head.train()
-            for imgs, labels in train_loader:
-                imgs, labels = imgs.to(self.device), labels.to(self.device)
-                with torch.no_grad():
-                    if self.name == "ResNet-50":
-                        feats = self.model(imgs)
-                    elif self.name == "ViT-B/16":
-                        self.features = []
-                        self.model(imgs)
-                        feats = self.features[0]
-                    elif self.name == "CLIP":
-                        feats = self.model.encode_image(imgs)
-                        feats = feats / feats.norm(dim=-1, keepdim=True)
+            perm = torch.randperm(dataset_size, device=self.device)
+            for i in range(0, dataset_size, batch_size):
+                idx = perm[i:i+batch_size]
+                feats = train_feats[idx]
+                labels = train_labels[idx]
                 
                 preds = self.head(feats)
                 loss = criterion(preds, labels)
@@ -92,26 +97,10 @@ class BackboneExtractor:
                 
             # Eval
             self.head.eval()
-            correct = 0
-            total = 0
             with torch.no_grad():
-                for imgs, labels in val_loader:
-                    imgs, labels = imgs.to(self.device), labels.to(self.device)
-                    if self.name == "ResNet-50":
-                        feats = self.model(imgs)
-                    elif self.name == "ViT-B/16":
-                        self.features = []
-                        self.model(imgs)
-                        feats = self.features[0]
-                    elif self.name == "CLIP":
-                        feats = self.model.encode_image(imgs)
-                        feats = feats / feats.norm(dim=-1, keepdim=True)
-                        
-                    preds = self.head(feats)
-                    correct += (preds.argmax(1) == labels).sum().item()
-                    total += labels.size(0)
+                val_preds = self.head(val_feats)
+                acc = (val_preds.argmax(1) == val_labels).float().mean().item()
             
-            acc = correct / total
             if acc > best_acc:
                 best_acc = acc
                 no_improve = 0
