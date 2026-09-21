@@ -1,6 +1,8 @@
 seed: 6304
 data_root: ./data/oxford-iiit-pet
 output_dir: task1/results
+batch_size: 1024
+num_workers: 8
 
 subset:
   n_per_class: 50
@@ -10,7 +12,7 @@ training:
   weight_decay: 1.0e-4
   max_epochs: 50
   patience: 5
-  batch_size: 64
+  batch_size: 1024
 
 cue_conflicts:
   n_pairs: 5
