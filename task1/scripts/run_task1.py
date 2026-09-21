@@ -256,7 +256,6 @@ def plot_cka_heatmap(features_dict: dict, title: str, out_path: str) -> None:
         for j in range(n):
             ax.text(j, i, f"{cka_matrix[i, j]:.2f}", ha="center", va="center", color="black" if cka_matrix[i,j] < 0.5 else "white")
             
-    plt.tight_layout()
     savefig(out_path, fig)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
