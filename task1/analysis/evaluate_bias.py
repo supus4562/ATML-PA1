@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from sklearn.metrics import accuracy_score, f1_score
 from task1.data.transforms import apply_grayscale, apply_hue_rotation, apply_translation, apply_patch_shuffle
@@ -25,11 +26,18 @@ def evaluate_color_bias(model, clean_pil_images, labels, config):
     transform = getattr(model, 'get_transform', lambda: model.transform)()
     
     gray_imgs = [apply_grayscale(img) for img in clean_pil_images]
+    out_dir = os.path.join(config.get("output_dir", "task1/results"), "report_images")
+    os.makedirs(out_dir, exist_ok=True)
+    for i in range(min(5, len(gray_imgs))):
+        gray_imgs[i].save(os.path.join(out_dir, f"grayscale_{i}.jpg"))
+        clean_pil_images[i].save(os.path.join(out_dir, f"original_clean_{i}.jpg"))
     gray_ds = PILDataset(gray_imgs, labels, transform)
     gray_loader = DataLoader(gray_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
     gray_preds, _, _ = model.predict(gray_loader)
     
     hue_imgs = [apply_hue_rotation(img) for img in clean_pil_images]
+    for i in range(min(5, len(hue_imgs))):
+        hue_imgs[i].save(os.path.join(out_dir, f"hue_{i}.jpg"))
     hue_ds = PILDataset(hue_imgs, labels, transform)
     hue_loader = DataLoader(hue_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
     hue_preds, _, _ = model.predict(hue_loader)
@@ -100,6 +108,10 @@ def evaluate_translation(model, clean_pil_images, labels, config):
         all_d_preds = []
         for direction in directions:
             imgs = [apply_translation(img, d, direction) for img in clean_pil_images]
+            out_dir = os.path.join(config.get("output_dir", "task1/results"), "report_images")
+            os.makedirs(out_dir, exist_ok=True)
+            for i in range(min(2, len(imgs))):
+                imgs[i].save(os.path.join(out_dir, f"translation_d{d}_{direction}_{i}.jpg"))
             ds = PILDataset(imgs, labels, transform)
             loader = DataLoader(ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
             preds, _, _ = model.predict(loader)
@@ -124,6 +136,10 @@ def evaluate_patch_shuffle(model, clean_pil_images, labels, config):
     clean_preds, _, _ = model.predict(clean_loader)
     
     shuffled = [apply_patch_shuffle(img, perm) for img in clean_pil_images]
+    out_dir = os.path.join(config.get("output_dir", "task1/results"), "report_images")
+    os.makedirs(out_dir, exist_ok=True)
+    for i in range(min(5, len(shuffled))):
+        shuffled[i].save(os.path.join(out_dir, f"patch_shuffle_{i}.jpg"))
     ds = PILDataset(shuffled, labels, transform)
     loader = DataLoader(ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
     preds, _, _ = model.predict(loader)
