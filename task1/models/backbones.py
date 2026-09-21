@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torchvision.transforms as T
@@ -68,7 +69,7 @@ class BackboneExtractor:
         patience = config.get('patience', 5)
         no_improve = 0
         
-        for epoch in range(config.get('max_epochs', 50)):
+        for epoch in tqdm(range(config.get('max_epochs', 50)), desc=f'Training {self.name} head'):
             self.head.train()
             for imgs, labels in train_loader:
                 imgs, labels = imgs.to(self.device), labels.to(self.device)
