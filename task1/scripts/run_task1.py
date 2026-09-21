@@ -280,6 +280,10 @@ def main() -> None:
     os.makedirs(os.path.join(config["output_dir"], "figures"), exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == 'cuda':
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        print("[task1] Enabled TF32 for Ampere (A100) optimization")
     print(f"[task1] device={device}")
 
     # ── Datasets ──────────────────────────────────────────────────────────────
@@ -344,9 +348,9 @@ def main() -> None:
         train_ds = IndexDataset(train_dataset, train_transform)
         val_ds   = IndexDataset(test_dataset,  val_transform)
         train_loader = DataLoader(train_ds, batch_size=config["training"]["batch_size"],
-                                  shuffle=True, num_workers=2, pin_memory=True)
+                                  shuffle=True, num_workers=config.get("num_workers", 8), pin_memory=True)
         val_loader   = DataLoader(val_ds,   batch_size=config["training"]["batch_size"],
-                                  shuffle=False, num_workers=2, pin_memory=True)
+                                  shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
 
         model.train_linear_head(train_loader, val_loader, config["training"])
 
@@ -356,7 +360,7 @@ def main() -> None:
             zs = CLIPZeroShot(device)
             PET_CLASSES = train_dataset.classes
             clean_ds_zs = PILDataset(clean_pil_images, labels_arr, transform)
-            zs_loader   = DataLoader(clean_ds_zs, batch_size=64, shuffle=False)
+            zs_loader   = DataLoader(clean_ds_zs, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
             zs_preds, zs_probs, zs_lbls = zs.predict(zs_loader, PET_CLASSES)
             from sklearn.metrics import accuracy_score, f1_score
             metrics["step1_clip_zeroshot"] = {
@@ -407,7 +411,7 @@ def main() -> None:
         # Grayscale
         gray_imgs = [apply_grayscale(img) for img in clean_pil_images]
         gray_ds   = PILDataset(gray_imgs, labels_arr, transform)
-        gray_loader = DataLoader(gray_ds, batch_size=64, shuffle=False)
+        gray_loader = DataLoader(gray_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
         f_clean, _ = model.extract_features(clean_loader)
         f_gray, _  = model.extract_features(gray_loader)
         features_for_cka["clean"][model_name] = f_clean
@@ -419,7 +423,7 @@ def main() -> None:
         # Patch shuffle
         patch_imgs = [apply_patch_shuffle(img, perm) for img in clean_pil_images]
         patch_ds   = PILDataset(patch_imgs, labels_arr, transform)
-        patch_loader = DataLoader(patch_ds, batch_size=64, shuffle=False)
+        patch_loader = DataLoader(patch_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
         f_patch, _ = model.extract_features(patch_loader)
         features_for_cka["patch"][model_name] = f_patch
         s_patch = cosine_stability(f_clean, f_patch)
@@ -429,7 +433,7 @@ def main() -> None:
         for direction in ["up", "down", "left", "right"]:
             trans_imgs = [apply_translation(img, 32, direction) for img in clean_pil_images]
             trans_ds   = PILDataset(trans_imgs, labels_arr, transform)
-            trans_loader = DataLoader(trans_ds, batch_size=64, shuffle=False)
+            trans_loader = DataLoader(trans_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
             f_trans, _ = model.extract_features(trans_loader)
             features_for_cka["translation"][model_name] = f_trans
             s_trans_list.append(cosine_stability(f_clean, f_trans))
@@ -440,11 +444,11 @@ def main() -> None:
             cc_imgs = [c["stylized_pil"] for c in conflicts]
             cc_labs = [0] * len(cc_imgs)  # dummy labels, not used for stability
             cc_ds   = PILDataset(cc_imgs, cc_labs, transform)
-            cc_loader = DataLoader(cc_ds, batch_size=64, shuffle=False)
+            cc_loader = DataLoader(cc_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
             f_cc, _ = model.extract_features(cc_loader)
-            # Use matching clean features (subset of f_clean by content_idx)
             content_idxs = [subset_indices.index(c["content_idx"])
-                            for c in conflicts if c["content_idx"] in subset_indices]            if content_idxs:
+                            for c in conflicts if c["content_idx"] in subset_indices]
+            if content_idxs:
                 f_clean_cc = f_clean[content_idxs[:len(f_cc)]]
                 s_cc = cosine_stability(f_clean_cc, f_cc[:len(f_clean_cc)])
                 features_for_cka["cue_conflict"][model_name] = f_cc[:len(f_clean_cc)]
