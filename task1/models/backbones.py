@@ -70,7 +70,7 @@ class BackboneExtractor:
         with torch.no_grad():
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                feats = self._forward_feats(imgs)
+                feats = self._forward_feats(imgs).float()  # ensure float32 even under AMP
                 all_feats.append(feats.cpu())
                 if labels is not None:
                     all_labels.append(labels.cpu())
@@ -143,7 +143,7 @@ class BackboneExtractor:
         with torch.no_grad():
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                feats = self._forward_feats(imgs)
+                feats = self._forward_feats(imgs).float()  # ensure float32 even under AMP
                     
                 logits = self.head(feats)
                 probs = torch.softmax(logits, dim=-1)
