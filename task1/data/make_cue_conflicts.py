@@ -77,7 +77,10 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
                     std=[1/0.229, 1/0.224, 1/0.225])
     ])
     
-    class_to_indices = {c: [] for c in range(10)}
+    classes = getattr(dataset, "classes", None)
+    if classes is None:
+        classes = [str(i) for i in range(max(dataset.targets)+1)]
+    class_to_indices = {c: [] for c in range(len(classes))}
     for idx in subset_indices:
         img, label = dataset[idx]
         class_to_indices[label].append(idx)
@@ -85,7 +88,7 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
     results = []
     
     # Map class name to label
-    classes = ['airplane', 'bird', 'car', 'deer', 'dog', 'horse', 'monkey', 'ship', 'truck', 'frog']
+    
     class_to_idx = {name: i for i, name in enumerate(classes)}
     
     for c1_name, c2_name in pairs:
