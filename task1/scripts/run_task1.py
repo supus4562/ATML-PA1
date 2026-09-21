@@ -3,7 +3,7 @@
 Runs all 6 steps and saves every required plot and metric automatically.
 
 Usage:
-  python task1/scripts/run_task1.py --data_root ./data/stl10 --output_dir task1/results
+  python task1/scripts/run_task1.py --data_root ./data/oxford-iiit-pet --output_dir task1/results
 """
 from __future__ import annotations
 
@@ -281,8 +281,11 @@ def main() -> None:
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == 'cuda':
+        # Re-apply A100 optimizations AFTER set_all_seeds (which sets deterministic=True)
+        # TF32 must be explicitly re-enabled; benchmark=True is OK for inference-only pipeline
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True  # fast kernel selection; safe since input size is fixed
         print("[task1] Enabled TF32 for Ampere (A100) optimization")
     print(f"[task1] device={device}")
 
