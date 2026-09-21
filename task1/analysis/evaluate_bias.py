@@ -4,6 +4,13 @@ from sklearn.metrics import accuracy_score, f1_score
 from task1.data.transforms import apply_grayscale, apply_hue_rotation, apply_translation, apply_patch_shuffle
 from torch.utils.data import DataLoader, Dataset
 import torch
+import math
+
+def _dl_kwargs_from_config(config):
+    batch_size = int(config.get('batch_size', 128))
+    num_workers = int(config.get('num_workers', 8))
+    pin_memory = True if torch.cuda.is_available() else False
+    return {'batch_size': batch_size, 'num_workers': num_workers, 'pin_memory': pin_memory}
 
 class PILDataset(Dataset):
     def __init__(self, pil_images, labels, transform):
@@ -24,7 +31,8 @@ def evaluate_clean(model, dataloader, config):
 
 def evaluate_color_bias(model, clean_pil_images, labels, config):
     transform = getattr(model, 'get_transform', lambda: model.transform)()
-    
+    dl_kwargs = _dl_kwargs_from_config(config)
+
     gray_imgs = [apply_grayscale(img) for img in clean_pil_images]
     out_dir = os.path.join(config.get("output_dir", "task1/results"), "report_images")
     os.makedirs(out_dir, exist_ok=True)
@@ -32,19 +40,19 @@ def evaluate_color_bias(model, clean_pil_images, labels, config):
         gray_imgs[i].save(os.path.join(out_dir, f"grayscale_{i}.jpg"))
         clean_pil_images[i].save(os.path.join(out_dir, f"original_clean_{i}.jpg"))
     gray_ds = PILDataset(gray_imgs, labels, transform)
-    gray_loader = DataLoader(gray_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    gray_loader = DataLoader(gray_ds, shuffle=False, **dl_kwargs)
     gray_preds, _, _ = model.predict(gray_loader)
     
     hue_imgs = [apply_hue_rotation(img) for img in clean_pil_images]
     for i in range(min(5, len(hue_imgs))):
         hue_imgs[i].save(os.path.join(out_dir, f"hue_{i}.jpg"))
     hue_ds = PILDataset(hue_imgs, labels, transform)
-    hue_loader = DataLoader(hue_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    hue_loader = DataLoader(hue_ds, shuffle=False, **dl_kwargs)
     hue_preds, _, _ = model.predict(hue_loader)
     
     # get clean preds for consistency
     clean_ds = PILDataset(clean_pil_images, labels, transform)
-    clean_loader = DataLoader(clean_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    clean_loader = DataLoader(clean_ds, shuffle=False, **dl_kwargs)
     clean_preds, _, _ = model.predict(clean_loader)
     
     return {
@@ -70,7 +78,7 @@ def evaluate_cue_conflicts(model, conflicts, config):
     
     imgs = [c['stylized_pil'] for c in conflicts]
     ds = PILDataset(imgs, [0]*len(imgs), transform)
-    loader = DataLoader(ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    loader = DataLoader(ds, shuffle=False, **dl_kwargs)
     
     preds, _, _ = model.predict(loader)
     
@@ -93,7 +101,7 @@ def evaluate_translation(model, clean_pil_images, labels, config):
     transform = getattr(model, 'get_transform', lambda: model.transform)()
     
     clean_ds = PILDataset(clean_pil_images, labels, transform)
-    clean_loader = DataLoader(clean_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    clean_loader = DataLoader(clean_ds, shuffle=False, **dl_kwargs)
     clean_preds, _, _ = model.predict(clean_loader)
     
     displacements = config['translation']['displacements']
@@ -113,7 +121,7 @@ def evaluate_translation(model, clean_pil_images, labels, config):
             for i in range(min(2, len(imgs))):
                 imgs[i].save(os.path.join(out_dir, f"translation_d{d}_{direction}_{i}.jpg"))
             ds = PILDataset(imgs, labels, transform)
-            loader = DataLoader(ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+            loader = DataLoader(ds, shuffle=False, **dl_kwargs)
             preds, _, _ = model.predict(loader)
             all_d_preds.append(preds)
             
@@ -132,7 +140,7 @@ def evaluate_patch_shuffle(model, clean_pil_images, labels, config):
     perm = np.random.permutation(16).tolist()
     
     clean_ds = PILDataset(clean_pil_images, labels, transform)
-    clean_loader = DataLoader(clean_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    clean_loader = DataLoader(clean_ds, shuffle=False, **dl_kwargs)
     clean_preds, _, _ = model.predict(clean_loader)
     
     shuffled = [apply_patch_shuffle(img, perm) for img in clean_pil_images]
@@ -141,7 +149,7 @@ def evaluate_patch_shuffle(model, clean_pil_images, labels, config):
     for i in range(min(5, len(shuffled))):
         shuffled[i].save(os.path.join(out_dir, f"patch_shuffle_{i}.jpg"))
     ds = PILDataset(shuffled, labels, transform)
-    loader = DataLoader(ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+    loader = DataLoader(ds, shuffle=False, **dl_kwargs)
     preds, _, _ = model.predict(loader)
     
     return {

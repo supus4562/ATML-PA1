@@ -17,7 +17,10 @@ def make_balanced_subset(dataset, n_per_class=50, seed=6304):
     num_classes = len(dataset.classes) if hasattr(dataset, 'classes') else len(np.unique(targets))
     for c in range(num_classes):
         c_indices = np.where(targets == c)[0]
-        chosen = np.random.choice(c_indices, n_per_class, replace=False)
+        if len(c_indices) == 0:
+            continue
+        replace = len(c_indices) < n_per_class
+        chosen = np.random.choice(c_indices, n_per_class, replace=replace)
         indices.extend(chosen.tolist())
     
     os.makedirs('task1/data', exist_ok=True)

@@ -22,16 +22,21 @@ def cosine_stability(features_clean, features_transformed):
     
     return np.mean(np.sum(clean_normed * trans_normed, axis=1))
 
-def compute_all_stabilities(backbone, clean_pil_images, transform_fn, batch_size=64):
+def compute_all_stabilities(backbone, clean_pil_images, transform_fn, batch_size=64, num_workers=None, pin_memory=None):
     transform = getattr(backbone, 'get_transform', lambda: backbone.transform)()
-    
+
+    if num_workers is None:
+        num_workers = 8
+    if pin_memory is None:
+        pin_memory = True if torch.cuda.is_available() else False
+
     clean_ds = PILDataset(clean_pil_images, transform)
-    clean_loader = DataLoader(clean_ds, batch_size=batch_size, shuffle=False)
+    clean_loader = DataLoader(clean_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
     features_clean, _ = backbone.extract_features(clean_loader)
-    
+
     trans_imgs = [transform_fn(img) for img in clean_pil_images]
     trans_ds = PILDataset(trans_imgs, transform)
-    trans_loader = DataLoader(trans_ds, batch_size=batch_size, shuffle=False)
+    trans_loader = DataLoader(trans_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
     features_trans, _ = backbone.extract_features(trans_loader)
     
     return cosine_stability(features_clean, features_trans), features_clean, features_trans

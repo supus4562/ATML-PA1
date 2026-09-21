@@ -286,6 +286,12 @@ def main() -> None:
         print("[task1] Enabled TF32 for Ampere (A100) optimization")
     print(f"[task1] device={device}")
 
+    # Batch / dataloader defaults
+    train_bs = config["training"].get("batch_size", config.get("batch_size", 128))
+    eval_bs = config.get("batch_size", train_bs)
+    num_workers = config.get("num_workers", 8)
+    pin_memory = True if device.type == 'cuda' else False
+
     # ── Datasets ──────────────────────────────────────────────────────────────
     print("[task1] Downloading / loading Oxford-IIIT Pet ...")
     train_dataset = OxfordIIITPet(root=config["data_root"], split="trainval", download=True)
@@ -355,10 +361,10 @@ def main() -> None:
 
         train_ds = IndexDataset(train_dataset, train_transform)
         val_ds   = IndexDataset(test_dataset,  val_transform)
-        train_loader = DataLoader(train_ds, batch_size=config["training"]["batch_size"],
-                                  shuffle=True, num_workers=config.get("num_workers", 8), pin_memory=True)
-        val_loader   = DataLoader(val_ds,   batch_size=config["training"]["batch_size"],
-                                  shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+        train_loader = DataLoader(train_ds, batch_size=train_bs,
+                      shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+        val_loader   = DataLoader(val_ds,   batch_size=train_bs,
+                      shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
         model.train_linear_head(train_loader, val_loader, config["training"])
 
@@ -368,7 +374,7 @@ def main() -> None:
             zs = CLIPZeroShot(device)
             PET_CLASSES = train_dataset.classes
             clean_ds_zs = PILDataset(clean_pil_images, labels_arr, transform)
-            zs_loader   = DataLoader(clean_ds_zs, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+            zs_loader   = DataLoader(clean_ds_zs, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
             zs_preds, zs_probs, zs_lbls = zs.predict(zs_loader, PET_CLASSES)
             from sklearn.metrics import accuracy_score, f1_score
             metrics["step1_clip_zeroshot"] = {
@@ -380,8 +386,7 @@ def main() -> None:
 
         # Build shared clean loader using this model's transform
         clean_ds     = PILDataset(clean_pil_images, labels_arr, transform)
-        clean_loader = DataLoader(clean_ds, batch_size=config["training"]["batch_size"],
-                                  shuffle=False)
+        clean_loader = DataLoader(clean_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
 
         # Step 1: clean baseline
         print("[task1]   Step 1: clean baseline ...")
@@ -419,7 +424,7 @@ def main() -> None:
         # Grayscale
         gray_imgs = [apply_grayscale(img) for img in clean_pil_images]
         gray_ds   = PILDataset(gray_imgs, labels_arr, transform)
-        gray_loader = DataLoader(gray_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+        gray_loader = DataLoader(gray_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
         f_clean, _ = model.extract_features(clean_loader)
         f_gray, _  = model.extract_features(gray_loader)
         features_for_cka["clean"][model_name] = f_clean
@@ -431,28 +436,32 @@ def main() -> None:
         # Patch shuffle
         patch_imgs = [apply_patch_shuffle(img, perm) for img in clean_pil_images]
         patch_ds   = PILDataset(patch_imgs, labels_arr, transform)
-        patch_loader = DataLoader(patch_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+        patch_loader = DataLoader(patch_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
         f_patch, _ = model.extract_features(patch_loader)
         features_for_cka["patch"][model_name] = f_patch
         s_patch = cosine_stability(f_clean, f_patch)
 
         # Translation δ=32 (average over 4 directions)
         s_trans_list = []
+        f_trans_list = []
         for direction in ["up", "down", "left", "right"]:
             trans_imgs = [apply_translation(img, 32, direction) for img in clean_pil_images]
             trans_ds   = PILDataset(trans_imgs, labels_arr, transform)
-            trans_loader = DataLoader(trans_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+            trans_loader = DataLoader(trans_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
             f_trans, _ = model.extract_features(trans_loader)
-            features_for_cka["translation"][model_name] = f_trans
+            f_trans_list.append(f_trans)
             s_trans_list.append(cosine_stability(f_clean, f_trans))
         s_trans = float(np.mean(s_trans_list))
+        # Aggregate translation features across directions (mean per-sample)
+        if len(f_trans_list) > 0:
+            features_for_cka["translation"][model_name] = np.mean(np.stack(f_trans_list, axis=0), axis=0)
 
         # Cue conflict
         if conflicts:
             cc_imgs = [c["stylized_pil"] for c in conflicts]
             cc_labs = [0] * len(cc_imgs)  # dummy labels, not used for stability
             cc_ds   = PILDataset(cc_imgs, cc_labs, transform)
-            cc_loader = DataLoader(cc_ds, batch_size=config.get("batch_size", 1024), shuffle=False, num_workers=config.get("num_workers", 8), pin_memory=True)
+            cc_loader = DataLoader(cc_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
             f_cc, _ = model.extract_features(cc_loader)
             content_idxs = [subset_indices.index(c["content_idx"])
                             for c in conflicts if c["content_idx"] in subset_indices]

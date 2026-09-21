@@ -22,11 +22,7 @@ class BackboneExtractor:
             self.model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
             self.model.heads = nn.Identity()
             self.transform = ViT_B_16_Weights.IMAGENET1K_V1.transforms()
-            # Hook class token
-            self.features = []
-            def hook(m, i, o):
-                self.features.append(o[:, 0])
-            self.model.encoder.ln.register_forward_hook(hook)
+            # We'll attach a short-lived forward hook when extracting features
         elif name == "CLIP":
             self.model, _, self.transform = open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')
         
@@ -36,26 +32,55 @@ class BackboneExtractor:
     def get_transform(self):
         return self.transform
 
+    def _forward_feats(self, imgs: torch.Tensor) -> torch.Tensor:
+        use_amp = (self.device.type == 'cuda')
+        if use_amp:
+            with torch.amp.autocast(device_type='cuda'):
+                if self.name == "ResNet-50":
+                    return self.model(imgs)
+                elif self.name == "ViT-B/16":
+                    features = []
+                    def hook(m, inp, out):
+                        features.append(out[:, 0].detach())
+                    handle = self.model.encoder.ln.register_forward_hook(hook)
+                    self.model(imgs)
+                    handle.remove()
+                    return features[0]
+                elif self.name == "CLIP":
+                    feats = self.model.encode_image(imgs)
+                    return feats / feats.norm(dim=-1, keepdim=True)
+        else:
+            if self.name == "ResNet-50":
+                return self.model(imgs)
+            elif self.name == "ViT-B/16":
+                features = []
+                def hook(m, inp, out):
+                    features.append(out[:, 0].detach())
+                handle = self.model.encoder.ln.register_forward_hook(hook)
+                self.model(imgs)
+                handle.remove()
+                return features[0]
+            elif self.name == "CLIP":
+                feats = self.model.encode_image(imgs)
+                return feats / feats.norm(dim=-1, keepdim=True)
+
     def extract_features(self, dataloader):
         all_feats = []
         all_labels = []
         with torch.no_grad():
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                if self.name == "ResNet-50":
-                    feats = self.model(imgs)
-                elif self.name == "ViT-B/16":
-                    self.features = []
-                    self.model(imgs)
-                    feats = self.features[0]
-                elif self.name == "CLIP":
-                    feats = self.model.encode_image(imgs)
-                    feats = feats / feats.norm(dim=-1, keepdim=True)
-                    
-                all_feats.append(feats.cpu().numpy())
+                feats = self._forward_feats(imgs)
+                all_feats.append(feats.cpu())
                 if labels is not None:
-                    all_labels.append(labels.cpu().numpy())
-        return np.concatenate(all_feats), (np.concatenate(all_labels) if len(all_labels) > 0 else None)
+                    all_labels.append(labels.cpu())
+
+        if len(all_feats) == 0:
+            return np.zeros((0,)), None
+
+        feats_cat = torch.cat(all_feats, dim=0).numpy()
+        labels_cat = (torch.cat(all_labels, dim=0).numpy() if len(all_labels) > 0 else None)
+        return feats_cat, labels_cat
 
     def train_linear_head(self, train_loader, val_loader, config):
         feat_dim = 2048 if self.name == "ResNet-50" else (768 if self.name == "ViT-B/16" else 512)
@@ -118,15 +143,7 @@ class BackboneExtractor:
         with torch.no_grad():
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                if self.name == "ResNet-50":
-                    feats = self.model(imgs)
-                elif self.name == "ViT-B/16":
-                    self.features = []
-                    self.model(imgs)
-                    feats = self.features[0]
-                elif self.name == "CLIP":
-                    feats = self.model.encode_image(imgs)
-                    feats = feats / feats.norm(dim=-1, keepdim=True)
+                feats = self._forward_feats(imgs)
                     
                 logits = self.head(feats)
                 probs = torch.softmax(logits, dim=-1)

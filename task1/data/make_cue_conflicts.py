@@ -100,7 +100,7 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
                 style_idx = class_to_indices[c_style][(i * 3 + 7) % len(class_to_indices[c_style])]
                 tasks.append((c_content, c_style, content_idx, style_idx))
     
-    batch_size = 128
+    batch_size = int(config.get('batch_size', 32))
     for chunk_start in range(0, len(tasks), batch_size):
         chunk = tasks[chunk_start:chunk_start+batch_size]
         
@@ -116,15 +116,27 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
         style_batch = torch.stack(style_tensors).to(device)
         
         with torch.no_grad():
-            content_feats = vgg(content_batch)
-            style_feats = vgg(style_batch)
+            # Use AMP for forward passes to reduce memory/compute on CUDA
+            use_amp = (device.type == 'cuda')
+            if use_amp:
+                with torch.amp.autocast(device_type='cuda'):
+                    content_feats = vgg(content_batch)
+                    style_feats = vgg(style_batch)
+            else:
+                content_feats = vgg(content_batch)
+                style_feats = vgg(style_batch)
             
         opt_batch = content_batch.clone().requires_grad_(True)
         optimizer = optim.Adam([opt_batch], lr=config['lr'])
         
-        for step in range(config['n_steps']):
+        for step in range(int(config.get('n_steps', 200))):
             optimizer.zero_grad()
-            opt_feats = vgg(opt_batch)
+            # AMP for optimization forward as well
+            if device.type == 'cuda':
+                with torch.amp.autocast(device_type='cuda'):
+                    opt_feats = vgg(opt_batch)
+            else:
+                opt_feats = vgg(opt_batch)
             c_loss = calc_content_loss(opt_feats, content_feats)
             s_loss = calc_style_loss(opt_feats, style_feats)
             loss = float(config['content_weight']) * c_loss + float(config['style_weight']) * s_loss
@@ -134,6 +146,9 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
         # Post-process
         final_batch = denorm(opt_batch.detach().cpu()).clamp(0, 1)
         orig_batch = denorm(content_batch.cpu()).clamp(0, 1)
+        # Replace any NaN/Inf values before converting to PIL to avoid invalid casts
+        final_batch = torch.nan_to_num(final_batch, nan=0.0, posinf=1.0, neginf=0.0)
+        orig_batch = torch.nan_to_num(orig_batch, nan=0.0, posinf=1.0, neginf=0.0)
         
         for b in range(len(chunk)):
             c_content, c_style, content_idx, style_idx = chunk[b]
