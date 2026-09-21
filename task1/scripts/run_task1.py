@@ -318,6 +318,13 @@ def main() -> None:
         test_dataset, subset_indices, pairs, config["cue_conflicts"], device
     )
     print(f"  → {len(conflicts)} accepted cue conflicts")
+    
+    # Save the generated images to disk so the user can use them in the report
+    cc_img_dir = os.path.join(config["output_dir"], "cue_conflict_images")
+    os.makedirs(cc_img_dir, exist_ok=True)
+    for i, c in enumerate(conflicts):
+        img_name = f"{c['content_class']}_shape_{c['style_class']}_texture_{i}.jpg"
+        c['stylized_pil'].save(os.path.join(cc_img_dir, img_name))
 
     # ── Metrics storage ────────────────────────────────────────────────────────
     metrics: dict = {
