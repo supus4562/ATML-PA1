@@ -58,7 +58,8 @@ class BackboneExtractor:
 
     def train_linear_head(self, train_loader, val_loader, config):
         feat_dim = 2048 if self.name == "ResNet-50" else (768 if self.name == "ViT-B/16" else 512)
-        self.head = nn.Linear(feat_dim, 10).to(self.device)
+        num_classes = len(config.get("classes", range(10)))
+        self.head = nn.Linear(feat_dim, num_classes).to(self.device)
         
         optimizer = torch.optim.AdamW(self.head.parameters(), lr=config.get('lr', 1e-3), weight_decay=config.get('weight_decay', 1e-4))
         criterion = nn.CrossEntropyLoss()
