@@ -89,67 +89,84 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
     
     # Map class name to label
     
+    tasks = []
     class_to_idx = {name: i for i, name in enumerate(classes)}
-    
     for c1_name, c2_name in pairs:
         c1 = class_to_idx[c1_name]
         c2 = class_to_idx[c2_name]
-        
-        # Directions: c1 content, c2 style and vice versa
         for c_content, c_style in [(c1, c2), (c2, c1)]:
             for i in range(len(class_to_indices[c_content])):
                 content_idx = class_to_indices[c_content][i]
                 style_idx = class_to_indices[c_style][(i * 3 + 7) % len(class_to_indices[c_style])]
+                tasks.append((c_content, c_style, content_idx, style_idx))
+    
+    batch_size = 128
+    for chunk_start in range(0, len(tasks), batch_size):
+        chunk = tasks[chunk_start:chunk_start+batch_size]
+        
+        content_tensors = []
+        style_tensors = []
+        for (c_content, c_style, content_idx, style_idx) in chunk:
+            content_img, _ = dataset[content_idx]
+            style_img, _ = dataset[style_idx]
+            content_tensors.append(transform(content_img))
+            style_tensors.append(transform(style_img))
+            
+        content_batch = torch.stack(content_tensors).to(device)
+        style_batch = torch.stack(style_tensors).to(device)
+        
+        with torch.no_grad():
+            content_feats = vgg(content_batch)
+            style_feats = vgg(style_batch)
+            
+        opt_batch = content_batch.clone().requires_grad_(True)
+        optimizer = optim.Adam([opt_batch], lr=config['lr'])
+        
+        for step in range(config['n_steps']):
+            optimizer.zero_grad()
+            opt_feats = vgg(opt_batch)
+            c_loss = calc_content_loss(opt_feats, content_feats)
+            s_loss = calc_style_loss(opt_feats, style_feats)
+            loss = float(config['content_weight']) * c_loss + float(config['style_weight']) * s_loss
+            loss.backward()
+            optimizer.step()
+            
+        # Post-process
+        final_batch = denorm(opt_batch.detach().cpu()).clamp(0, 1)
+        orig_batch = denorm(content_batch.cpu()).clamp(0, 1)
+        
+        for b in range(len(chunk)):
+            c_content, c_style, content_idx, style_idx = chunk[b]
+            
+            final_img_tensor = final_batch[b]
+            orig_img_tensor = orig_batch[b]
+            
+            final_pil = T.ToPILImage()(final_img_tensor)
+            orig_pil = T.ToPILImage()(orig_img_tensor)
+            
+            # SSIM
+            img1_np = np.array(final_pil)
+            img2_np = np.array(orig_pil)
+            ssim_val = ssim_fn(img1_np, img2_np, channel_axis=2, data_range=255)
+            
+            # Individual Style Loss
+            with torch.no_grad():
+                f_feats = vgg(transform(final_pil).unsqueeze(0).to(device))
+                s_feats = vgg(style_tensors[b].unsqueeze(0).to(device))
+                final_s_loss = calc_style_loss(f_feats, s_feats).item()
                 
-                content_img, _ = dataset[content_idx]
-                style_img, _ = dataset[style_idx]
-                
-                content_tensor = transform(content_img).unsqueeze(0).to(device)
-                style_tensor = transform(style_img).unsqueeze(0).to(device)
-                
-                with torch.no_grad():
-                    content_feats = vgg(content_tensor)
-                    style_feats = vgg(style_tensor)
-                
-                opt_img = content_tensor.clone().requires_grad_(True)
-                optimizer = optim.Adam([opt_img], lr=config['lr'])
-                
-                for step in range(config['n_steps']):
-                    optimizer.zero_grad()
-                    opt_feats = vgg(opt_img)
-                    
-                    c_loss = calc_content_loss(opt_feats, content_feats)
-                    s_loss = calc_style_loss(opt_feats, style_feats)
-                    loss = float(config['content_weight']) * c_loss + float(config['style_weight']) * s_loss
-                    loss.backward()
-                    optimizer.step()
-                
-                final_img_tensor = denorm(opt_img.squeeze(0).detach().cpu()).clamp(0, 1)
-                final_pil = T.ToPILImage()(final_img_tensor)
-                
-                orig_content_pil = T.ToPILImage()(denorm(content_tensor.squeeze(0).cpu()).clamp(0, 1))
-                
-                # Compute SSIM
-                img1_np = np.array(final_pil)
-                img2_np = np.array(orig_content_pil)
-                ssim_val = ssim_fn(img1_np, img2_np, channel_axis=2, data_range=255)
-                
-                with torch.no_grad():
-                    final_feats = vgg(transform(final_pil).unsqueeze(0).to(device))
-                    final_s_loss = calc_style_loss(final_feats, style_feats).item()
-                
-                results.append({
-                    'content_class': classes[c_content],
-                    'style_class': classes[c_style],
-                    'content_idx': content_idx,
-                    'style_idx': style_idx,
-                    'stylized_pil': final_pil,
-                    'style_loss': final_s_loss,
-                    'ssim': ssim_val
-                })
-                
-                if len(results) >= config.get('max_generate_total', 1000):
-                    break
+            results.append({
+                'content_class': classes[c_content],
+                'style_class': classes[c_style],
+                'content_idx': content_idx,
+                'style_idx': style_idx,
+                'stylized_pil': final_pil,
+                'style_loss': final_s_loss,
+                'ssim': ssim_val
+            })
+            
+        if len(results) >= config.get('max_generate_total', 1000):
+            break
                     
     # Rejection
     all_s_loss = [r['style_loss'] for r in results]
