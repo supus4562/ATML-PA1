@@ -17,9 +17,15 @@ class CDANTrainer:
         self.device = device
         self.cls_criterion = nn.CrossEntropyLoss()
         self.dom_criterion = nn.CrossEntropyLoss()
+        self.lambda_adv = config.get("lambda_adv", 0.1)
+        # Separate optimizers: backbone+classifier vs discriminator
         self.optimizer = torch.optim.AdamW(
-            list(self.backbone.parameters()) + list(self.classifier.parameters()) + list(self.discriminator.parameters()),
+            list(self.backbone.parameters()) + list(self.classifier.parameters()),
             lr=config["lr"], weight_decay=config["weight_decay"],
+        )
+        self.disc_optimizer = torch.optim.AdamW(
+            list(self.discriminator.parameters()),
+            lr=config.get("disc_lr", config["lr"]), weight_decay=config["weight_decay"],
         )
 
     def train(self, source_loaders, target_loader, val_loaders):
@@ -64,7 +70,6 @@ class CDANTrainer:
                 sx = torch.cat(batch_x, dim=0).to(self.device)
                 sy = torch.cat(batch_y, dim=0).to(self.device)
                 tx = tx.to(self.device)
-                self.optimizer.zero_grad()
                 s_feat = self.backbone(sx)
                 t_feat = self.backbone(tx)
                 s_logits = self.classifier(s_feat)
@@ -81,10 +86,20 @@ class CDANTrainer:
                 ]).to(self.device)
                 dom_logits = self.discriminator(feat, alpha)
                 dom_loss = self.dom_criterion(dom_logits, dom_labels)
-                loss = cls_loss + dom_loss
+                loss = cls_loss + self.lambda_adv * dom_loss
+                self.optimizer.zero_grad()
+                self.disc_optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(list(self.backbone.parameters()) + list(self.classifier.parameters()) + list(self.discriminator.parameters()), max_norm=1.0)
+                torch.nn.utils.clip_grad_norm_(
+                    list(self.backbone.parameters()) + list(self.classifier.parameters()),
+                    max_norm=5.0,
+                )
+                torch.nn.utils.clip_grad_norm_(
+                    list(self.discriminator.parameters()),
+                    max_norm=5.0,
+                )
                 self.optimizer.step()
+                self.disc_optimizer.step()
                 total_loss  += cls_loss.item()
                 total_align += dom_loss.item()
                 batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss.item():.4f}", alpha=f"{alpha:.3f}")
