@@ -17,6 +17,7 @@ import yaml
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
+from tqdm import tqdm
 
 # Allow imports from repo root
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -93,7 +94,15 @@ def main() -> None:
     os.makedirs(os.path.join(config["output_dir"], "figures"), exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[train] device={device}  method={config['method']}")
+    if device.type == "cuda":
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+        tqdm.write("[train] Enabled TF32 + cuDNN benchmark for Ampere (A100) optimization")
+    tqdm.write(f"[train] device={device}  method={config['method']}")
+
+    num_workers = config.get("num_workers", 8)
+    pin_memory  = device.type == "cuda"
 
     # ── Build splits ──────────────────────────────────────────────────────────
     splits = load_or_create_splits(config["pacs_root"], seed=config["seed"])
@@ -112,11 +121,11 @@ def main() -> None:
 
         source_train_loaders.append(
             DataLoader(ds_train, batch_size=config["batch_size_per_domain"],
-                       shuffle=True, drop_last=True, num_workers=2, pin_memory=True)
+                       shuffle=True, drop_last=True, num_workers=num_workers, pin_memory=pin_memory)
         )
         source_val_loaders.append(
             DataLoader(ds_val, batch_size=64, shuffle=False,
-                       num_workers=2, pin_memory=True)
+                       num_workers=num_workers, pin_memory=pin_memory)
         )
 
     # ── Target (Sketch) loader — NO LABELS used during training ──────────────
@@ -124,7 +133,7 @@ def main() -> None:
                             transform=TRAIN_TRANSFORM)
     target_loader = DataLoader(target_ds, batch_size=config["target_batch_size"],
                                shuffle=True, drop_last=True,
-                               num_workers=2, pin_memory=True)
+                               num_workers=num_workers, pin_memory=pin_memory)
 
     # ── Model ─────────────────────────────────────────────────────────────────
     backbone = ResNet18Backbone(pretrained=True).to(device)
@@ -166,8 +175,8 @@ def main() -> None:
     curves_path = os.path.join(config["output_dir"], f"{method}_training_curves.json")
     with open(curves_path, "w") as f:
         json.dump(history, f, indent=2)
-    print(f"[train] Training curves saved to {curves_path}")
-    print(f"[train] Done. Best checkpoint: {config['checkpoint_path']}")
+    tqdm.write(f"[train] Training curves saved to {curves_path}")
+    tqdm.write(f"[train] Done. Best checkpoint: {config['checkpoint_path']}")
 
 
 if __name__ == "__main__":
