@@ -409,10 +409,65 @@ def main() -> None:
         json.dump(all_results, f, indent=2, default=float)
     tqdm.write(f"\n[evaluate_sketch] Results saved to {json_path}")
 
-    # ── Build CSV table ───────────────────────────────────────────────────────
-    rows = []
+    # ── Build main scalar metrics CSV (matching Task 2 structure) ────────────
+    scalar_rows = []
     for name, res in all_results.items():
-        rows.append({
+        row = {
+            "method": name,
+            "mean_source_val_acc": res["mean_source"]["accuracy"],
+            "mean_source_val_f1": res["mean_source"]["macro_f1"],
+            "worst_source_val_acc": res["worst_source"]["accuracy"],
+            "worst_source_val_f1": res["worst_source"]["macro_f1"],
+            "sketch_acc": res["sketch"]["accuracy"],
+            "sketch_f1": res["sketch"]["macro_f1"],
+            "sketch_delta_acc": res.get("sketch_delta_acc", 0.0),
+            "source_separability_3class": res["source_separability_3class"],
+            "sharpness_proxy": res["sharpness_proxy"],
+        }
+        for dname, dmetrics in res.get("source_per_domain", {}).items():
+            row[f"{dname}_val_acc"] = dmetrics["accuracy"]
+            row[f"{dname}_val_f1"] = dmetrics["macro_f1"]
+        scalar_rows.append(row)
+
+    df_scalars = pd.DataFrame(scalar_rows)
+    cols_priority = [
+        "method",
+        "photo_val_acc", "photo_val_f1",
+        "art_painting_val_acc", "art_painting_val_f1",
+        "cartoon_val_acc", "cartoon_val_f1",
+        "mean_source_val_acc", "mean_source_val_f1",
+        "worst_source_val_acc", "worst_source_val_f1",
+        "sketch_acc", "sketch_f1", "sketch_delta_acc",
+        "source_separability_3class", "sharpness_proxy",
+    ]
+    cols = [c for c in cols_priority if c in df_scalars.columns] + [c for c in df_scalars.columns if c not in cols_priority]
+    df_scalars = df_scalars[cols]
+    csv_path = os.path.join(args.output_dir, "final_results.csv")
+    df_scalars.to_csv(csv_path, index=False)
+    tqdm.write(f"[evaluate_sketch] Main metrics CSV saved to {csv_path}")
+
+    # ── Build per-class CSV (Sketch class breakdown) ───────────────────────────
+    if sketch_per_class_accs:
+        class_rows = []
+        for name, acc_array in sketch_per_class_accs.items():
+            c_row = {"method": name}
+            for cls_name, a in zip(PACS_CLASSES, acc_array):
+                c_row[cls_name] = float(a)
+            c_row["mean_class_acc"] = float(np.mean(acc_array))
+            class_rows.append(c_row)
+        df_classes = pd.DataFrame(class_rows)
+        class_csv_path = os.path.join(args.output_dir, "per_class_results.csv")
+        df_classes.to_csv(class_csv_path, index=False)
+        tqdm.write(f"[evaluate_sketch] Per-class breakdown CSV saved to {class_csv_path}")
+        tqdm.write("\n" + "=" * 70)
+        tqdm.write("Per-Class Target (Sketch) Accuracy Breakdown:")
+        tqdm.write("-" * 70)
+        tqdm.write(df_classes.to_string(index=False))
+
+    # ── Console summary & Table figure ─────────────────────────────────────────
+    display_rows = []
+    for name, res in all_results.items():
+        display_rows.append({
             "Method": name,
             "Sketch Acc": f"{res['sketch']['accuracy']:.4f}",
             "Sketch F1": f"{res['sketch']['macro_f1']:.4f}",
@@ -422,20 +477,20 @@ def main() -> None:
             "Separability": f"{res['source_separability_3class']:.4f}",
             "Sharpness": f"{res['sharpness_proxy']:.6f}",
         })
-    df = pd.DataFrame(rows)
-    csv_path = os.path.join(args.output_dir, "final_results.csv")
-    df.to_csv(csv_path, index=False)
-    tqdm.write(f"[evaluate_sketch] CSV saved to {csv_path}")
-    tqdm.write("\n" + df.to_string(index=False))
+    df_display = pd.DataFrame(display_rows)
+    tqdm.write("\n" + "=" * 70)
+    tqdm.write("Task 3 Summary Table:")
+    tqdm.write("-" * 70)
+    tqdm.write(df_display.to_string(index=False))
+    tqdm.write("=" * 70)
 
-    # ── Table figure ──────────────────────────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(14, max(3, len(rows) + 1)))
+    fig, ax = plt.subplots(figsize=(14, max(3, len(display_rows) + 1)))
     ax.axis("tight")
     ax.axis("off")
-    tbl = ax.table(cellText=df.values, colLabels=df.columns, loc="center", cellLoc="center")
+    tbl = ax.table(cellText=df_display.values, colLabels=df_display.columns, loc="center", cellLoc="center")
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(9)
-    tbl.auto_set_column_width(col=list(range(len(df.columns))))
+    tbl.auto_set_column_width(col=list(range(len(df_display.columns))))
     fig.suptitle("Task 3 — Domain Generalization Results", fontsize=12, fontweight="bold")
     savefig(os.path.join(args.output_dir, "figures", "comparison_table.png"), fig)
     tqdm.write(f"[evaluate_sketch] Comparison table figure saved to figures/comparison_table.png")
@@ -461,6 +516,10 @@ def main() -> None:
             with open(comp_path, "w") as f:
                 json.dump(comp_data, f, indent=2)
 
+            comp_df = pd.DataFrame([comp_data])
+            comp_csv_path = os.path.join(args.output_dir, "task2_vs_task3_dan_comparison.csv")
+            comp_df.to_csv(comp_csv_path, index=False)
+
             tqdm.write("\n" + "=" * 70)
             tqdm.write("Cross-Task Comparison: Target-Aware DAN (Task 2) vs Target-Free DAN-DG (Task 3)")
             tqdm.write("-" * 70)
@@ -471,7 +530,7 @@ def main() -> None:
             if t3_dan_acc is not None and t2_erm_acc is not None:
                 tqdm.write(f"Task 3 DAN-DG (aligned sources only): {t3_dan_acc:.4f} (Δ = {t3_dan_acc - t2_erm_acc:+.4f})")
             tqdm.write("=" * 70)
-            tqdm.write(f"[evaluate_sketch] Task 2 vs 3 comparison saved to {comp_path}")
+            tqdm.write(f"[evaluate_sketch] Task 2 vs 3 comparison saved to {comp_csv_path}")
         except Exception as e:
             tqdm.write(f"[evaluate_sketch] Note: Could not compute Task 2 vs Task 3 comparison: {e}")
 
