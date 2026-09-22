@@ -1,0 +1,26 @@
+method,rank,true_class,pred_class,count
+ERM,1,horse,dog,289
+ERM,2,elephant,dog,257
+ERM,3,giraffe,person,162
+ERM,4,horse,elephant,143
+ERM,5,dog,elephant,142
+DAN-DG,1,horse,dog,248
+DAN-DG,2,dog,elephant,200
+DAN-DG,3,giraffe,dog,101
+DAN-DG,4,elephant,dog,85
+DAN-DG,5,horse,elephant,77
+SAM (ρ=0.01),1,horse,dog,338
+SAM (ρ=0.01),2,dog,elephant,194
+SAM (ρ=0.01),3,horse,elephant,167
+SAM (ρ=0.01),4,giraffe,dog,149
+SAM (ρ=0.01),5,giraffe,person,82
+SAM (ρ=0.05),1,dog,elephant,469
+SAM (ρ=0.05),2,horse,elephant,456
+SAM (ρ=0.05),3,giraffe,elephant,216
+SAM (ρ=0.05),4,guitar,elephant,169
+SAM (ρ=0.05),5,giraffe,person,90
+SAM (ρ=0.1),1,horse,dog,324
+SAM (ρ=0.1),2,dog,elephant,249
+SAM (ρ=0.1),3,horse,elephant,164
+SAM (ρ=0.1),4,giraffe,dog,152
+SAM (ρ=0.1),5,guitar,elephant,128
