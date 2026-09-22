@@ -169,7 +169,6 @@ def plot_training_curves(output_dir: str, method_tag: str) -> None:
             axes[1].legend()
             axes[1].grid(True, linestyle="--", alpha=0.5)
 
-        plt.tight_layout()
         savefig(os.path.join(output_dir, "figures", f"{method_tag}_curves.png"), fig)
     except Exception as e:
         tqdm.write(f"  [WARNING] Could not plot training curves for {method_tag}: {e}")
@@ -203,7 +202,6 @@ def plot_sam_study(output_dir: str, sam_results: dict[float, dict]) -> None:
     ax1.legend(lines, labels, loc="upper right")
     ax1.set_title("SAM Controlled Study (ρ ∈ {0.01, 0.05, 0.1})", fontweight="bold")
     ax1.grid(True, linestyle="--", alpha=0.5)
-    plt.tight_layout()
     savefig(os.path.join(output_dir, "figures", "controlled_study_sam_rho.png"), fig)
 
 
@@ -235,7 +233,6 @@ def plot_dan_study(output_dir: str, dan_results: dict[float, dict]) -> None:
     ax1.legend(lines, labels, loc="upper right")
     ax1.set_title("DAN-DG Controlled Study (λ_DG ∈ {0.1, 1, 10})", fontweight="bold")
     ax1.grid(True, linestyle="--", alpha=0.5)
-    plt.tight_layout()
     savefig(os.path.join(output_dir, "figures", "controlled_study_lambda_dg.png"), fig)
 
 

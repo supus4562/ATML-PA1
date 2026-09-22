@@ -83,7 +83,6 @@ def plot_per_class_delta(
     ax.set_ylabel("ΔAcc vs Source-only")
     ax.set_title("Per-class Target Accuracy Change vs Source-only (Sketch test set)")
     ax.legend(loc="upper right")
-    plt.tight_layout()
 
     from common.plotting import savefig
     savefig(out_path, fig)
@@ -117,8 +116,6 @@ def plot_confusion_matrix(
             ax.text(j, i, f"{cm[i, j]:.2f}",
                     ha="center", va="center", fontsize=7.5,
                     color="white" if cm[i, j] > 0.5 else "black")
-
-    plt.tight_layout()
 
     from common.plotting import savefig
     savefig(out_path, fig)

@@ -85,7 +85,6 @@ def plot_per_class_delta(
     ax.set_ylabel(f"ΔAcc vs {baseline_name}")
     ax.set_title(f"Task 3 — Per-Class Sketch Accuracy Change vs {baseline_name}")
     ax.legend(loc="upper right")
-    plt.tight_layout()
 
     savefig(out_path, fig)
 
@@ -119,5 +118,5 @@ def plot_confusion_matrix(
                     ha="center", va="center", fontsize=7.5,
                     color="white" if cm[i, j] > 0.5 else "black")
 
-    plt.tight_layout()
     savefig(out_path, fig)
+
