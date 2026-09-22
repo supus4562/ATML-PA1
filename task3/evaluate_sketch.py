@@ -484,6 +484,24 @@ def main() -> None:
         tqdm.write("-" * 70)
         tqdm.write(df_classes.to_string(index=False))
 
+    # ── Build top confusions CSV (Failure mode breakdown) ─────────────────────
+    confusion_rows = []
+    for name, res in all_results.items():
+        confs = res.get("top_confusions", [])
+        for rank, c in enumerate(confs, start=1):
+            confusion_rows.append({
+                "method": name,
+                "rank": rank,
+                "true_class": c["true"],
+                "pred_class": c["pred"],
+                "count": c["count"],
+            })
+    if confusion_rows:
+        df_conf = pd.DataFrame(confusion_rows)
+        conf_csv_path = os.path.join(args.output_dir, "top_confusions.csv")
+        df_conf.to_csv(conf_csv_path, index=False)
+        tqdm.write(f"[evaluate_sketch] Top confusions CSV saved to {conf_csv_path}")
+
     # ── Console summary & Table figure ─────────────────────────────────────────
     display_rows = []
     for name, res in all_results.items():
