@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-import seaborn as sns
+try:
+    import seaborn as sns
+except ImportError:
+    sns = None
 
 
 # ── Global defaults ────────────────────────────────────────────────────────────
@@ -18,7 +21,10 @@ def apply_style() -> None:
     global _STYLE_APPLIED
     if _STYLE_APPLIED:
         return
-    sns.set_theme(style="whitegrid", palette=PALETTE, font_scale=1.1)
+    if sns is not None:
+        sns.set_theme(style="whitegrid", palette=PALETTE, font_scale=1.1)
+    else:
+        plt.style.use("seaborn-v0_8-whitegrid" if "seaborn-v0_8-whitegrid" in plt.style.available else "default")
     plt.rcParams.update({
         "figure.dpi": FIGURE_DPI,
         "savefig.dpi": FIGURE_DPI,

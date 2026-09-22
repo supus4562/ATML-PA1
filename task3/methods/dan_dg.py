@@ -1,9 +1,38 @@
+"""task3/methods/dan_dg.py — DAN-DG (multi-source pairwise MMD alignment) for Task 3."""
+from __future__ import annotations
+
+import os
 import torch
 import torch.nn as nn
 from torch.optim import AdamW
-import json
-import os
-from common.metrics import calculate_accuracy, calculate_macro_f1
+from tqdm import tqdm
+from common.metrics import calculate_metrics
+
+
+def compute_mmd(source_features: torch.Tensor, target_features: torch.Tensor, kernel_scales: list[float]) -> torch.Tensor:
+    """Exact vectorized MMD computation matching Task 2."""
+    n = source_features.size(0)
+    m = target_features.size(0)
+    combined = torch.cat([source_features, target_features], dim=0)
+    xx = torch.sum(combined ** 2, dim=1, keepdim=True)
+    dist = xx + xx.t() - 2.0 * torch.matmul(combined, combined.t())
+    median_dist = torch.median(dist[dist > 0])
+    if median_dist == 0:
+        median_dist = torch.tensor(1.0, device=combined.device)
+    mmd2 = torch.tensor(0.0, device=combined.device)
+    for scale in kernel_scales:
+        bandwidth = scale * median_dist
+        kernel_val = torch.exp(-dist / (2.0 * bandwidth))
+        k_ss = kernel_val[:n, :n]
+        k_tt = kernel_val[n:, n:]
+        k_st = kernel_val[:n, n:]
+        mmd2 = mmd2 + (
+            (torch.sum(k_ss) - torch.trace(k_ss)) / (n * (n - 1))
+            + (torch.sum(k_tt) - torch.trace(k_tt)) / (m * (m - 1))
+            - 2.0 * torch.mean(k_st)
+        )
+    return mmd2
+
 
 class DanDGTrainer:
     def __init__(self, backbone, classifier, config, device):
@@ -13,138 +42,135 @@ class DanDGTrainer:
         self.device = device
         self.optimizer = AdamW(
             list(self.backbone.parameters()) + list(self.classifier.parameters()),
-            lr=float(config['lr']),
-            weight_decay=float(config['weight_decay'])
+            lr=float(config["lr"]),
+            weight_decay=float(config["weight_decay"]),
         )
         self.criterion = nn.CrossEntropyLoss()
-        
+
     def _freeze_bn(self):
         for module in self.backbone.modules():
             if isinstance(module, nn.BatchNorm2d):
                 module.eval()
 
-    def _compute_mmd_across_domains(self, features_per_domain):
-        def mmd2(X, Y):
-            n_x, n_y = X.shape[0], Y.shape[0]
-            XX = torch.cdist(X, X, p=2) ** 2
-            YY = torch.cdist(Y, Y, p=2) ** 2
-            XY = torch.cdist(X, Y, p=2) ** 2
-            
-            with torch.no_grad():
-                combined = torch.cat([X, Y], dim=0)
-                dists = torch.cdist(combined, combined, p=2) ** 2
-                median_dist = torch.median(dists[dists > 0])
-                if median_dist == 0:
-                    median_dist = torch.tensor(1.0, device=self.device)
-            
-            bandwidths = [scale * median_dist for scale in self.config['kernel_scales']]
-            
-            def rbf(D, bandwidths):
-                return sum(torch.exp(-D / bw) for bw in bandwidths)
-            
-            K_XX = rbf(XX, bandwidths)
-            K_YY = rbf(YY, bandwidths)
-            K_XY = rbf(XY, bandwidths)
-            
-            return K_XX.sum() / (n_x * n_x) + K_YY.sum() / (n_y * n_y) - 2 * K_XY.sum() / (n_x * n_y)
-
-        f_photo, f_art, f_cartoon = features_per_domain
-        mmd_pa = mmd2(f_photo, f_art)
-        mmd_pc = mmd2(f_photo, f_cartoon)
-        mmd_ac = mmd2(f_art, f_cartoon)
-        
-        return (mmd_pa + mmd_pc + mmd_ac) / 3.0
-
     def train(self, source_loaders, val_loaders):
+        # Allow loaders passed as dict or list
+        if isinstance(source_loaders, dict):
+            domains = self.config.get("source_domains", list(source_loaders.keys()))
+            src_loaders = [source_loaders[d] for d in domains]
+        else:
+            src_loaders = list(source_loaders)
+
+        if isinstance(val_loaders, dict):
+            val_ldrs = list(val_loaders.values())
+        else:
+            val_ldrs = list(val_loaders)
+
         best_val_f1 = 0.0
-        epochs_no_improve = 0
-        history = []
-        
-        for epoch in range(self.config['max_epochs']):
+        patience_counter = 0
+        history = {"train_loss": [], "align_loss": [], "val_macro_f1": []}
+        checkpoint_path = self.config.get(
+            "checkpoint_path",
+            os.path.join(self.config.get("output_dir", "task3/results"), "dan_dg_checkpoint.pth"),
+        )
+        os.makedirs(os.path.dirname(os.path.abspath(checkpoint_path)), exist_ok=True)
+        lambda_dg = float(self.config.get("lambda_dg", 1.0))
+        kernel_scales = self.config.get("kernel_scales", [0.5, 1.0, 2.0])
+
+        epoch_bar = tqdm(range(self.config["max_epochs"]), desc="dan_dg", unit="epoch")
+        for epoch in epoch_bar:
             self.backbone.train()
             self.classifier.train()
             self._freeze_bn()
-            
-            iterators = [iter(loader) for loader in source_loaders.values()]
-            epoch_loss = 0.0
-            
-            min_batches = min(len(loader) for loader in source_loaders.values())
-            
-            for _ in range(min_batches):
-                batches = [next(it) for it in iterators]
-                X = torch.cat([b[0] for b in batches]).to(self.device)
-                Y = torch.cat([b[1] for b in batches]).to(self.device)
-                
+
+            total_cls = 0.0
+            total_align = 0.0
+            n_iters = max(len(loader) for loader in src_loaders)
+            source_iters = [iter(loader) for loader in src_loaders]
+
+            batch_bar = tqdm(range(n_iters), desc="  batches", leave=False, unit="batch")
+            for _ in batch_bar:
+                batch_x, batch_y = [], []
+                for i, (siter, dl) in enumerate(zip(source_iters, src_loaders)):
+                    try:
+                        x, y = next(siter)
+                    except StopIteration:
+                        source_iters[i] = iter(dl)
+                        x, y = next(source_iters[i])
+                    batch_x.append(x)
+                    batch_y.append(y)
+
+                # Concatenate all domains for unified forward pass
+                counts = [bx.size(0) for bx in batch_x]
+                x_all = torch.cat(batch_x, dim=0).to(self.device)
+                y_all = torch.cat(batch_y, dim=0).to(self.device)
+
                 self.optimizer.zero_grad()
-                features = self.backbone(X)
+                features = self.backbone(x_all)
                 logits = self.classifier(features)
-                
-                loss_cls = self.criterion(logits, Y)
-                
-                batch_size = X.shape[0] // 3
-                f_photo = features[:batch_size]
-                f_art = features[batch_size:2*batch_size]
-                f_cartoon = features[2*batch_size:]
-                
-                loss_align = self.config['lambda_dg'] * self._compute_mmd_across_domains([f_photo, f_art, f_cartoon])
-                
-                loss = loss_cls + loss_align
+
+                cls_loss = self.criterion(logits, y_all)
+
+                # Split features back by domain
+                feats_split = torch.split(features, counts, dim=0)
+                # Pairwise MMD across observed sources: (0, 1), (0, 2), (1, 2)
+                mmd_pairs = []
+                for i in range(len(feats_split)):
+                    for j in range(i + 1, len(feats_split)):
+                        mmd_pairs.append(compute_mmd(feats_split[i], feats_split[j], kernel_scales))
+
+                avg_mmd = sum(mmd_pairs) / len(mmd_pairs) if mmd_pairs else torch.tensor(0.0, device=self.device)
+                loss = cls_loss + lambda_dg * avg_mmd
+
                 loss.backward()
                 self.optimizer.step()
-                
-                epoch_loss += loss.item()
-                
-            val_results = self._evaluate(val_loaders)
-            mean_f1 = sum(v['macro_f1'] for v in val_results.values()) / len(val_results)
-            
-            history.append({
-                'epoch': epoch,
-                'train_loss': epoch_loss / min_batches,
-                'val_metrics': val_results,
-                'mean_f1': mean_f1
-            })
-            
-            if mean_f1 > best_val_f1:
-                best_val_f1 = mean_f1
-                epochs_no_improve = 0
-                self.save_checkpoint(os.path.join(self.config['output_dir'], f"{self.config['method']}_checkpoint.pth"), epoch, mean_f1)
+
+                total_cls += cls_loss.item()
+                total_align += avg_mmd.item()
+                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", mmd=f"{avg_mmd.item():.4f}")
+
+            avg_cls = total_cls / n_iters
+            avg_align = total_align / n_iters
+            history["train_loss"].append(avg_cls)
+            history["align_loss"].append(avg_align)
+
+            # ── Validation ────────────────────────────────────────────────────
+            self.backbone.eval()
+            self.classifier.eval()
+            val_f1s = []
+            with torch.no_grad():
+                for dl in val_ldrs:
+                    preds, targets = [], []
+                    for x, y in dl:
+                        x, y = x.to(self.device), y.to(self.device)
+                        preds.append(self.classifier(self.backbone(x)).argmax(dim=1).cpu())
+                        targets.append(y.cpu())
+                    m = calculate_metrics(torch.cat(targets), torch.cat(preds))
+                    val_f1s.append(m["macro_f1"])
+
+            mean_val_f1 = sum(val_f1s) / len(val_f1s)
+            history["val_macro_f1"].append(mean_val_f1)
+            epoch_bar.set_postfix(cls=f"{avg_cls:.4f}", mmd=f"{avg_align:.4f}", val_f1=f"{mean_val_f1:.4f}")
+
+            if mean_val_f1 > best_val_f1:
+                best_val_f1 = mean_val_f1
+                patience_counter = 0
+                self.save_checkpoint(checkpoint_path, epoch, mean_val_f1)
+                tqdm.write(f"  [dan_dg] Epoch {epoch+1}: cls={avg_cls:.4f}  mmd={avg_align:.4f}  val_f1={mean_val_f1:.4f}  ✓ new best")
             else:
-                epochs_no_improve += 1
-                if epochs_no_improve >= self.config['patience']:
+                patience_counter += 1
+                tqdm.write(f"  [dan_dg] Epoch {epoch+1}: cls={avg_cls:.4f}  mmd={avg_align:.4f}  val_f1={mean_val_f1:.4f}  (patience {patience_counter}/{self.config['patience']})")
+                if patience_counter >= self.config["patience"]:
+                    tqdm.write(f"  [dan_dg] Early stopping at epoch {epoch+1}.")
                     break
-                    
-        with open(os.path.join(self.config['output_dir'], f"{self.config['method']}_training_history.json"), 'w') as f:
-            json.dump(history, f, indent=4)
-            
+
         return history
 
-    def _evaluate(self, val_loaders):
-        self.backbone.eval()
-        self.classifier.eval()
-        results = {}
-        with torch.no_grad():
-            for name, loader in val_loaders.items():
-                all_preds, all_labels = [], []
-                for x, y in loader:
-                    x, y = x.to(self.device), y.to(self.device)
-                    logits = self.classifier(self.backbone(x))
-                    preds = torch.argmax(logits, dim=1)
-                    all_preds.append(preds.cpu())
-                    all_labels.append(y.cpu())
-                
-                preds = torch.cat(all_preds).numpy()
-                labels = torch.cat(all_labels).numpy()
-                results[name] = {
-                    'accuracy': calculate_accuracy(preds, labels),
-                    'macro_f1': calculate_macro_f1(preds, labels)
-                }
-        return results
-
-    def save_checkpoint(self, path, epoch, val_metric):
+    def save_checkpoint(self, path: str, epoch: int, val_metric: float) -> None:
         torch.save({
-            'backbone_state_dict': self.backbone.state_dict(),
-            'head_state_dict': self.classifier.state_dict(),
-            'epoch': epoch,
-            'val_metric': val_metric,
-            'config': self.config
+            "backbone_state_dict": self.backbone.state_dict(),
+            "head_state_dict":     self.classifier.state_dict(),
+            "epoch":               epoch,
+            "val_macro_f1":        val_metric,
+            "config":              self.config,
         }, path)
+
