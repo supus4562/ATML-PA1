@@ -121,13 +121,17 @@ def evaluate_on_loader(backbone, classifier, loader, device) -> dict:
 
 def plot_training_curves(output_dir: str, method_tag: str) -> None:
     """Plot training classification loss, align loss (if available), and val macro-F1."""
+    tag_lower = method_tag.lower().replace("-", "_")
     possible_files = [
         os.path.join(output_dir, f"{method_tag}_training_curves.json"),
         os.path.join(output_dir, f"{method_tag}_training_history.json"),
+        os.path.join(output_dir, f"{tag_lower}_training_curves.json"),
+        os.path.join(output_dir, f"{tag_lower}_training_history.json"),
+        os.path.join("task2", "results", "source_only_training_curves.json") if "erm" in tag_lower else None,
     ]
     curves_file = None
     for f in possible_files:
-        if os.path.exists(f):
+        if f and os.path.exists(f):
             curves_file = f
             break
     if not curves_file:
