@@ -40,7 +40,7 @@ ENV/
 # task2/results/
 # task3/results/
 # task4/results/
-# task4/cache/
+task4/cache/
 
 # ── OS / editor ───────────────────────────────────────────────────────────────
 .DS_Store
