@@ -83,6 +83,7 @@ class CDANTrainer:
                 dom_loss = self.dom_criterion(dom_logits, dom_labels)
                 loss = cls_loss + dom_loss
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(list(self.backbone.parameters()) + list(self.classifier.parameters()) + list(self.discriminator.parameters()), max_norm=1.0)
                 self.optimizer.step()
                 total_loss  += cls_loss.item()
                 total_align += dom_loss.item()
