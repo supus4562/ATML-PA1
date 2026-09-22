@@ -5,9 +5,9 @@ source_domains: [photo, art_painting, cartoon]
 target_domain: sketch
 n_classes: 7
 feature_dim: 512
-batch_size_per_domain: 64   # A100 80 GB — was 8; 3 domains × 64 = 192-sample batches
-target_batch_size: 192       # A100 80 GB — was 24; matched to combined source batch
-num_workers: 8               # A100 80 GB — was 2; 8 workers to saturate fast PCIe/NVLink
+batch_size_per_domain: 16
+target_batch_size: 48
+num_workers: 8
 max_epochs: 30
 patience: 5
 lr: 1.0e-4
