@@ -24,15 +24,15 @@ class CIFAR100Unknowns:
         
     def _filter_classes(self, class_dict, n_per_class):
         indices = []
-        labels = []
         class_names = []
         
         target_indices = set(class_dict.values())
         counts = {idx: 0 for idx in target_indices}
-        
         inv_class_dict = {v: k for k, v in class_dict.items()}
         
-        for i, (img, target) in enumerate(self.ds):
+        # Fast targets indexing without evaluating image transforms
+        targets = self.ds.targets
+        for i, target in enumerate(targets):
             if target in target_indices and counts[target] < n_per_class:
                 indices.append(i)
                 counts[target] += 1
@@ -41,18 +41,36 @@ class CIFAR100Unknowns:
         subset = Subset(self.ds, indices)
         return subset, class_names
 
-    def get_near_loader(self, batch_size=256, n_per_class=100):
+    def get_near_loader(self, batch_size=1024, n_per_class=100, num_workers=8, pin_memory=None):
+        if pin_memory is None:
+            pin_memory = torch.cuda.is_available()
         subset, class_names = self._filter_classes(NEAR_CLASSES, n_per_class)
-        loader = DataLoader(subset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+        persistent = (num_workers > 0)
+        loader = DataLoader(
+            subset, batch_size=batch_size, shuffle=False, 
+            num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+        )
         return loader, class_names
 
-    def get_far_loader(self, batch_size=256, n_per_class=100):
+    def get_far_loader(self, batch_size=1024, n_per_class=100, num_workers=8, pin_memory=None):
+        if pin_memory is None:
+            pin_memory = torch.cuda.is_available()
         subset, class_names = self._filter_classes(FAR_CLASSES, n_per_class)
-        loader = DataLoader(subset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+        persistent = (num_workers > 0)
+        loader = DataLoader(
+            subset, batch_size=batch_size, shuffle=False, 
+            num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+        )
         return loader, class_names
 
-    def get_all_unknowns_loader(self, batch_size=256, n_per_class=100):
+    def get_all_unknowns_loader(self, batch_size=1024, n_per_class=100, num_workers=8, pin_memory=None):
+        if pin_memory is None:
+            pin_memory = torch.cuda.is_available()
         all_classes = {**NEAR_CLASSES, **FAR_CLASSES}
         subset, class_names = self._filter_classes(all_classes, n_per_class)
-        loader = DataLoader(subset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        return loader
+        persistent = (num_workers > 0)
+        loader = DataLoader(
+            subset, batch_size=batch_size, shuffle=False, 
+            num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+        )
+        return loader, class_names

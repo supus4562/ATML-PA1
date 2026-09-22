@@ -7,7 +7,11 @@ from task4.data.make_splits import make_cifar10_splits
 CIFAR_MEAN = [0.4914, 0.4822, 0.4465]
 CIFAR_STD = [0.2023, 0.1994, 0.2010]
 
-def get_train_val_loaders(data_root, val_fraction=0.1, seed=6304, batch_size=128, randaugment=False, ra_ops=2, ra_mag=9):
+def get_train_val_loaders(data_root, val_fraction=0.1, seed=6304, batch_size=128, 
+                           randaugment=False, ra_ops=2, ra_mag=9, 
+                           num_workers=8, pin_memory=None):
+    if pin_memory is None:
+        pin_memory = torch.cuda.is_available()
     splits = make_cifar10_splits(data_root, val_fraction, seed)
     
     train_transform_list = [
@@ -34,24 +38,43 @@ def get_train_val_loaders(data_root, val_fraction=0.1, seed=6304, batch_size=128
     train_subset = Subset(train_ds, splits['train'])
     val_subset = Subset(val_ds, splits['val'])
     
-    train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    persistent = (num_workers > 0)
+    train_loader = DataLoader(
+        train_subset, batch_size=batch_size, shuffle=True, 
+        num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+    )
+    val_loader = DataLoader(
+        val_subset, batch_size=batch_size, shuffle=False, 
+        num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+    )
     
     return train_loader, val_loader
 
-def get_test_loader(data_root, batch_size=256):
+def get_test_loader(data_root, batch_size=1024, num_workers=8, pin_memory=None):
+    if pin_memory is None:
+        pin_memory = torch.cuda.is_available()
     transform = T.Compose([
         T.ToTensor(),
         T.Normalize(CIFAR_MEAN, CIFAR_STD)
     ])
     ds = datasets.CIFAR10(root=data_root, train=False, download=True, transform=transform)
-    return DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    persistent = (num_workers > 0)
+    return DataLoader(
+        ds, batch_size=batch_size, shuffle=False, 
+        num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+    )
 
-def get_train_loader_unaugmented(data_root, indices, batch_size=256):
+def get_train_loader_unaugmented(data_root, indices, batch_size=1024, num_workers=8, pin_memory=None):
+    if pin_memory is None:
+        pin_memory = torch.cuda.is_available()
     transform = T.Compose([
         T.ToTensor(),
         T.Normalize(CIFAR_MEAN, CIFAR_STD)
     ])
     ds = datasets.CIFAR10(root=data_root, train=True, download=True, transform=transform)
     subset = Subset(ds, indices)
-    return DataLoader(subset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    persistent = (num_workers > 0)
+    return DataLoader(
+        subset, batch_size=batch_size, shuffle=False, 
+        num_workers=num_workers, pin_memory=pin_memory, persistent_workers=persistent
+    )

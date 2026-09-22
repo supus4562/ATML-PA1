@@ -82,10 +82,15 @@ python task3/evaluate_sketch.py --pacs_root <path> --output_dir task3/results
 
 ### Task 4 — Open-Set Recognition
 ```bash
+# Training (A100 80GB optimized batch_size=512; use --batch_size 128 for strict PDF baseline)
 python task4/train.py --config task4/configs/vanilla.yaml --data_root ./data/cifar
 python task4/train.py --config task4/configs/gcsc.yaml    --data_root ./data/cifar
 python task4/train.py --config task4/configs/proser.yaml  --data_root ./data/cifar
+
+# Extract penultimate features & logits (batch_size=1024, TF32 accelerated)
 python task4/extract_outputs.py --data_root ./data/cifar
+
+# Evaluate post-hoc scores & methods, export CSVs, failure analysis, and figures
 python task4/evaluate_osr.py    --data_root ./data/cifar --output_dir task4/results
 ```
 

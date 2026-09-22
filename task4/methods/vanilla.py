@@ -17,15 +17,27 @@ class VanillaTrainer:
         
     def train(self, train_loader, val_loader):
         best_acc = 0.0
-        history = {'train_loss': [], 'val_acc': []}
+        history = {
+            'epoch': [],
+            'train_loss': [],
+            'train_acc': [],
+            'val_loss': [],
+            'val_acc': [],
+            'lr': []
+        }
         
-        for epoch in range(self.config['n_epochs']):
+        n_epochs = self.config['n_epochs']
+        for epoch in range(n_epochs):
             self.model.train()
             train_loss = 0.0
+            train_correct = 0
+            train_total = 0
+            current_lr = self.optimizer.param_groups[0]['lr']
             
-            pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{self.config['n_epochs']}")
+            pbar = tqdm(train_loader, desc=f"Epoch {epoch+1:03d}/{n_epochs}")
             for x, y in pbar:
-                x, y = x.to(self.device), y.to(self.device)
+                x = x.to(self.device, non_blocking=True)
+                y = y.to(self.device, non_blocking=True)
                 
                 self.optimizer.zero_grad()
                 logits = self.model(x)
@@ -33,34 +45,51 @@ class VanillaTrainer:
                 loss.backward()
                 self.optimizer.step()
                 
-                train_loss += loss.item() * x.size(0)
-                pbar.set_postfix({'loss': loss.item()})
+                bs = x.size(0)
+                train_loss += loss.item() * bs
+                preds = logits[:, :10].argmax(dim=1)
+                train_correct += (preds == y).sum().item()
+                train_total += bs
+                pbar.set_postfix({'loss': f"{loss.item():.4f}", 'lr': f"{current_lr:.5f}"})
                 
             self.scheduler.step()
-            train_loss /= len(train_loader.dataset)
+            train_loss /= train_total
+            train_acc = train_correct / train_total
             
-            val_acc = self.evaluate(val_loader)
+            val_loss, val_acc = self.evaluate(val_loader)
+            history['epoch'].append(epoch + 1)
             history['train_loss'].append(train_loss)
+            history['train_acc'].append(train_acc)
+            history['val_loss'].append(val_loss)
             history['val_acc'].append(val_acc)
+            history['lr'].append(current_lr)
             
             if val_acc > best_acc:
                 best_acc = val_acc
                 os.makedirs(os.path.dirname(self.config['checkpoint_path']), exist_ok=True)
                 torch.save(self.model.state_dict(), self.config['checkpoint_path'])
                 
-            print(f"Epoch {epoch+1} | Train Loss: {train_loss:.4f} | Val Acc: {val_acc:.4f} (Best: {best_acc:.4f})")
+            tqdm.write(
+                f"[Epoch {epoch+1:03d}/{n_epochs}] "
+                f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f} | "
+                f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f} (Best: {best_acc:.4f}) | LR: {current_lr:.6f}"
+            )
             
         return history
         
     def evaluate(self, loader):
         self.model.eval()
+        total_loss = 0.0
         correct = 0
         total = 0
         with torch.no_grad():
             for x, y in loader:
-                x, y = x.to(self.device), y.to(self.device)
+                x = x.to(self.device, non_blocking=True)
+                y = y.to(self.device, non_blocking=True)
                 logits = self.model(x)
-                preds = logits.argmax(dim=1)
+                loss = self.criterion(logits[:, :10], y)
+                total_loss += loss.item() * x.size(0)
+                preds = logits[:, :10].argmax(dim=1)
                 correct += (preds == y).sum().item()
                 total += y.size(0)
-        return correct / total
+        return total_loss / total, correct / total
