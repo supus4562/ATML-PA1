@@ -22,9 +22,10 @@ class DomainDiscriminator(nn.Module):
         self.grl = GradientReversalLayer()
         self.net = nn.Sequential(
             nn.Linear(in_dim, 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, 2)
+            nn.Linear(256, 2),
         )
 
     def forward(self, x, alpha):

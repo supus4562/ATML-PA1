@@ -70,39 +70,55 @@ class CDANTrainer:
                 sx = torch.cat(batch_x, dim=0).to(self.device)
                 sy = torch.cat(batch_y, dim=0).to(self.device)
                 tx = tx.to(self.device)
-                s_feat = self.backbone(sx)
-                t_feat = self.backbone(tx)
+                dom_labels = torch.cat([
+                    torch.zeros(sx.size(0), dtype=torch.long),
+                    torch.ones(tx.size(0), dtype=torch.long),
+                ]).to(self.device)
+
+                # ── Step 1: train discriminator on detached CDAN features ─────
+                with torch.no_grad():
+                    s_feat_d = self.backbone(sx)
+                    t_feat_d = self.backbone(tx)
+                    s_log_d  = self.classifier(s_feat_d)
+                    t_log_d  = self.classifier(t_feat_d)
+                    s_prob_d = torch.softmax(s_log_d, dim=1)
+                    t_prob_d = torch.softmax(t_log_d, dim=1)
+                    s_comb_d = torch.bmm(s_feat_d.unsqueeze(2), s_prob_d.unsqueeze(1)).view(s_feat_d.size(0), -1)
+                    t_comb_d = torch.bmm(t_feat_d.unsqueeze(2), t_prob_d.unsqueeze(1)).view(t_feat_d.size(0), -1)
+                    feat_d   = torch.cat([s_comb_d, t_comb_d], dim=0)
+                dom_logits_d = self.discriminator.net(feat_d)  # bypass GRL
+                dom_loss_disc = self.dom_criterion(dom_logits_d, dom_labels)
+                self.disc_optimizer.zero_grad()
+                dom_loss_disc.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    self.discriminator.parameters(), max_norm=5.0)
+                self.disc_optimizer.step()
+
+                # ── Step 2: train backbone+classifier with adversarial reversal ─
+                s_feat  = self.backbone(sx)
+                t_feat  = self.backbone(tx)
                 s_logits = self.classifier(s_feat)
                 t_logits = self.classifier(t_feat)
                 cls_loss = self.cls_criterion(s_logits, sy)
-                s_prob = torch.softmax(s_logits, dim=1)
-                t_prob = torch.softmax(t_logits, dim=1)
-                s_comb = torch.bmm(s_feat.unsqueeze(2), s_prob.unsqueeze(1)).view(s_feat.size(0), -1)
-                t_comb = torch.bmm(t_feat.unsqueeze(2), t_prob.unsqueeze(1)).view(t_feat.size(0), -1)
-                feat = torch.cat([s_comb, t_comb], dim=0)
-                dom_labels = torch.cat([
-                    torch.zeros(s_feat.size(0), dtype=torch.long),
-                    torch.ones(t_feat.size(0), dtype=torch.long),
-                ]).to(self.device)
-                dom_logits = self.discriminator(feat, alpha)
-                dom_loss = self.dom_criterion(dom_logits, dom_labels)
-                loss = cls_loss + self.lambda_adv * dom_loss
+                s_prob   = torch.softmax(s_logits, dim=1)
+                t_prob   = torch.softmax(t_logits, dim=1)
+                s_comb   = torch.bmm(s_feat.unsqueeze(2), s_prob.unsqueeze(1)).view(s_feat.size(0), -1)
+                t_comb   = torch.bmm(t_feat.unsqueeze(2), t_prob.unsqueeze(1)).view(t_feat.size(0), -1)
+                feat_adv = torch.cat([s_comb, t_comb], dim=0)
+                dom_logits_adv = self.discriminator(feat_adv, alpha)  # GRL active
+                dom_loss_adv   = self.dom_criterion(dom_logits_adv, dom_labels)
+                loss = cls_loss + self.lambda_adv * dom_loss_adv
                 self.optimizer.zero_grad()
-                self.disc_optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(
                     list(self.backbone.parameters()) + list(self.classifier.parameters()),
                     max_norm=5.0,
                 )
-                torch.nn.utils.clip_grad_norm_(
-                    list(self.discriminator.parameters()),
-                    max_norm=5.0,
-                )
                 self.optimizer.step()
-                self.disc_optimizer.step()
+
                 total_loss  += cls_loss.item()
-                total_align += dom_loss.item()
-                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss.item():.4f}", alpha=f"{alpha:.3f}")
+                total_align += dom_loss_disc.item()
+                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss_disc.item():.4f}", alpha=f"{alpha:.3f}")
 
             avg_loss  = total_loss  / iters
             avg_align = total_align / iters
