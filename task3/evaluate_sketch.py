@@ -440,6 +440,41 @@ def main() -> None:
     savefig(os.path.join(args.output_dir, "figures", "comparison_table.png"), fig)
     tqdm.write(f"[evaluate_sketch] Comparison table figure saved to figures/comparison_table.png")
 
+    # ── Task 2 vs Task 3 comparison (Target-Aware vs Target-Free) ─────────────
+    task2_json = os.path.join("task2", "results", "final_results.json")
+    if os.path.exists(task2_json):
+        try:
+            with open(task2_json) as f:
+                t2_res = json.load(f)
+            t2_dan_acc = t2_res.get("dan", {}).get("target_acc")
+            t2_erm_acc = t2_res.get("source_only", {}).get("target_acc")
+            t3_dan_acc = all_results.get("DAN-DG", {}).get("sketch", {}).get("accuracy")
+
+            comp_data = {
+                "shared_erm_sketch_acc": t2_erm_acc,
+                "task2_dan_target_aware_acc": t2_dan_acc,
+                "task2_dan_target_aware_delta": (t2_dan_acc - t2_erm_acc) if (t2_dan_acc is not None and t2_erm_acc is not None) else None,
+                "task3_dan_dg_target_free_acc": t3_dan_acc,
+                "task3_dan_dg_target_free_delta": (t3_dan_acc - t2_erm_acc) if (t3_dan_acc is not None and t2_erm_acc is not None) else None,
+            }
+            comp_path = os.path.join(args.output_dir, "task2_vs_task3_dan_comparison.json")
+            with open(comp_path, "w") as f:
+                json.dump(comp_data, f, indent=2)
+
+            tqdm.write("\n" + "=" * 70)
+            tqdm.write("Cross-Task Comparison: Target-Aware DAN (Task 2) vs Target-Free DAN-DG (Task 3)")
+            tqdm.write("-" * 70)
+            if t2_erm_acc is not None:
+                tqdm.write(f"Shared ERM (Source-Only) Sketch Acc: {t2_erm_acc:.4f}")
+            if t2_dan_acc is not None and t2_erm_acc is not None:
+                tqdm.write(f"Task 2 DAN (sees unlabeled Sketch):  {t2_dan_acc:.4f} (Δ = {t2_dan_acc - t2_erm_acc:+.4f})")
+            if t3_dan_acc is not None and t2_erm_acc is not None:
+                tqdm.write(f"Task 3 DAN-DG (aligned sources only): {t3_dan_acc:.4f} (Δ = {t3_dan_acc - t2_erm_acc:+.4f})")
+            tqdm.write("=" * 70)
+            tqdm.write(f"[evaluate_sketch] Task 2 vs 3 comparison saved to {comp_path}")
+        except Exception as e:
+            tqdm.write(f"[evaluate_sketch] Note: Could not compute Task 2 vs Task 3 comparison: {e}")
+
 
 if __name__ == "__main__":
     main()
