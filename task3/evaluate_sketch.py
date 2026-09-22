@@ -61,13 +61,36 @@ ERM_CHECKPOINT = "task2/results/source_only_checkpoint.pth"
 
 
 def load_checkpoint(checkpoint_path: str, device: torch.device, n_classes: int = 7):
-    """Load backbone + classifier from a checkpoint dict."""
+    """Load backbone + classifier from a checkpoint dict, supporting both Task 2 and Task 3 key formats."""
     bb = ResNet18Backbone(pretrained=False).to(device)
     cls = ClassifierHead(in_dim=512, n_classes=n_classes).to(device)
     ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    bb.load_state_dict(ckpt["backbone_state_dict"])
+
+    bb_sd = ckpt["backbone_state_dict"]
+    # Check if checkpoint uses Task 2 naming (features.conv1., features.layer1., etc.)
+    if any(k.startswith("features.conv1.") for k in bb_sd.keys()):
+        mapping = {
+            "features.conv1.": "features.0.",
+            "features.bn1.": "features.1.",
+            "features.layer1.": "features.4.",
+            "features.layer2.": "features.5.",
+            "features.layer3.": "features.6.",
+            "features.layer4.": "features.7.",
+        }
+        new_sd = {}
+        for k, v in bb_sd.items():
+            new_k = k
+            for old_p, new_p in mapping.items():
+                if k.startswith(old_p):
+                    new_k = new_p + k[len(old_p):]
+                    break
+            new_sd[new_k] = v
+        bb_sd = new_sd
+
+    bb.load_state_dict(bb_sd)
     cls.load_state_dict(ckpt["head_state_dict"])
     return bb, cls
+
 
 
 def evaluate_on_loader(backbone, classifier, loader, device) -> dict:
