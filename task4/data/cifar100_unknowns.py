@@ -4,6 +4,9 @@ from torchvision import datasets
 from torch.utils.data import DataLoader, Subset
 from task4.data.cifar10 import CIFAR_MEAN, CIFAR_STD
 
+# Use high-speed verified CDN mirror to bypass slow Toronto server throttling (~50 KB/s)
+datasets.CIFAR100.url = "https://data.brainchip.com/dataset-mirror/cifar100/cifar-100-python.tar.gz"
+
 NEAR_CLASSES = {
     'bus': 19, 'pickup_truck': 58, 'motorcycle': 48, 'tractor': 89,
     'wolf': 97, 'fox': 34, 'leopard': 42, 'camel': 15

@@ -4,6 +4,9 @@ from torchvision import datasets
 from torch.utils.data import DataLoader, Subset
 from task4.data.make_splits import make_cifar10_splits
 
+# Use high-speed verified CDN mirror to bypass slow Toronto server throttling (~50 KB/s)
+datasets.CIFAR10.url = "https://data.brainchip.com/dataset-mirror/cifar10/cifar-10-python.tar.gz"
+
 CIFAR_MEAN = [0.4914, 0.4822, 0.4465]
 CIFAR_STD = [0.2023, 0.1994, 0.2010]
 
