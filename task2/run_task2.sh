@@ -24,7 +24,7 @@
 set -euo pipefail
 
 # ── Parse arguments ───────────────────────────────────────────────────────────
-PACS_ROOT="${1:-${PACS_ROOT:-}}"
+PACS_ROOT="${PACS_ROOT:-${PACS:-}}"
 OUTPUT_DIR="${OUTPUT_DIR:-task2/results}"
 SKIP_SOURCE_ONLY=0
 EVAL_ONLY=0
@@ -33,17 +33,33 @@ for arg in "$@"; do
     case "$arg" in
         --skip-source-only) SKIP_SOURCE_ONLY=1 ;;
         --eval-only)        EVAL_ONLY=1 ;;
+        -*)                 ;;
+        *)
+            if [[ -z "$PACS_ROOT" || "$PACS_ROOT" == "/path/to/pacs" ]]; then
+                PACS_ROOT="$arg"
+            fi
+            ;;
     esac
 done
 
-if [[ -z "$PACS_ROOT" ]]; then
-    echo "ERROR: PACS root not specified."
-    echo "Usage: bash task2/run_task2.sh /path/to/pacs"
+if [[ "$PACS_ROOT" == "/path/to/pacs" ]]; then
+    # User literally pasted placeholder
+    if [[ -n "${PACS:-}" && -d "$PACS" ]]; then
+        PACS_ROOT="$PACS"
+    fi
+fi
+
+if [[ -z "$PACS_ROOT" || "$PACS_ROOT" == "/path/to/pacs" ]]; then
+    echo "ERROR: PACS root directory not provided or still set to placeholder '/path/to/pacs'."
+    echo "Please provide your actual PACS folder, for example:"
+    echo "  bash task2/run_task2.sh /workspace/data/PACS/pacs_data/pacs_data --skip-source-only"
+    echo "  or export PACS=/workspace/data/PACS/pacs_data/pacs_data && bash task2/run_task2.sh --skip-source-only"
     exit 1
 fi
 
 if [[ ! -d "$PACS_ROOT" ]]; then
     echo "ERROR: PACS root does not exist: $PACS_ROOT"
+    echo "Check that the directory exists on your system."
     exit 1
 fi
 
