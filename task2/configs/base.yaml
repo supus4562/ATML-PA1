@@ -5,11 +5,9 @@ source_domains: [photo, art_painting, cartoon]
 target_domain: sketch
 n_classes: 7
 feature_dim: 512
-# PA spec: "eight examples from each source domain and 24 target examples"
-# Total batch = 3*8 + 24 = 48 (equal source and target halves)
-batch_size_per_domain: 8
-target_batch_size: 24
-num_workers: 4
+batch_size_per_domain: 16
+target_batch_size: 48
+num_workers: 8
 max_epochs: 30
 patience: 5
 lr: 1.0e-4

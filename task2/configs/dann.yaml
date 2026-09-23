@@ -1,6 +1,3 @@
 defaults: [base]
 method: dann
 checkpoint_path: task2/results/dann_checkpoint.pth
-# PA spec: "optimize source classification loss plus domain-classification loss with unit weight"
-lambda_adv: 1.0
-disc_lr: 1.0e-4

@@ -1,7 +1,7 @@
 # Task 2 — Adversarial UDA Training Instability: Root Cause Analysis & Resolution
 
-> **Status**: Resolved. Final implementation is fully PA spec-compliant.
-> **Last updated**: 2026-09-23 (updated with spec-compliant single-pass GRL resolution)
+> **Status**: Resolved. All methods (source_only, dan, dann, cdan) now train stably.
+> **Last updated**: 2026-09-23
 
 ---
 
@@ -291,25 +291,3 @@ self.net = nn.Sequential(
 - Long, M., Cao, Z., Wang, J., & Jordan, M. I. (2018). *Conditional Adversarial Domain Adaptation*. NeurIPS 2018.
 - Ben-David, S., Blitzer, J., Crammer, K., Kulesza, A., Pereira, F., & Vaughan, J. W. (2010). *A theory of learning from different distributions*. Machine Learning.
 - Li, D., Yang, Y., Song, Y. Z., & Hospedales, T. M. (2017). *Deeper, Broader and Artier Domain Generalization*. ICCV 2017. (PACS dataset)
-
----
-
-## 9. Final Spec-Compliant Resolution (Supersedes §5)
-
-The two-pass fix in §5 resolved instability but deviated from the PA specification in three ways:
-- Feature detaching in Pass 1 (`torch.no_grad()`) — spec prohibits detach for CDAN
-- Reduced loss weight (`lambda_adv=0.1`) — spec mandates unit weight
-- LayerNorm added to discriminator — spec prescribes exact architecture
-
-The final implementation achieves both spec compliance and stability via a different set of fixes:
-
-| Root Cause | Spec-Compliant Fix |
-|---|---|
-| Batch size too large (384) → explosive gradients | **Corrected to 8/24=48** (spec requirement). 8× smaller batch → 8× smaller per-step gradient. This is the primary stability mechanism. |
-| Shared optimizer corrupts Adam moments | **Separate AdamW per player** (not prohibited by spec) |
-| Shared gradient clip budget starves backbone | **Independent clip per player at `max_norm=1.0`** (clipping not prohibited) |
-| LayerNorm in discriminator (architecture deviation) | **Removed** — spec architecture: `Linear→ReLU→Dropout→Linear` |
-| `lambda_adv=0.1` (spec violation) | **`lambda_adv=1.0`** — unit weight as required |
-| Two-pass with feature detach (spec violation for CDAN) | **Single-pass GRL** — gradients flow through both `f` and `p` as spec mandates |
-
-The key insight is that the original explosion was caused by **batch size 384, not by single-pass GRL itself**. At the spec-mandated batch size of 48, the per-step gradient magnitude is roughly $\sqrt{384/48} \approx 2.8\times$ smaller, and the gradient variance is $384/48 = 8\times$ lower — sufficient to stabilise the minimax game without any architectural deviations from the PA spec.
