@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 ## Dataset Setup
 
-### STL-10 (Task 1)
+### Oxford-IIIT Pet (Task 1)
 Downloaded automatically by `torchvision` on first run. No manual steps needed.
 
 ### CIFAR-10 / CIFAR-100 (Task 4)
@@ -58,7 +58,7 @@ PACS must be downloaded manually.
 ### Task 1 — Inductive Biases and Feature Representations
 ```bash
 python task1/scripts/run_task1.py \
-  --data_root ./data/stl10 \
+  --data_root ./data/oxford-iiit-pet \
   --output_dir task1/results
 ```
 All figures saved to `task1/results/figures/`.
