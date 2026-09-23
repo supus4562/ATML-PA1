@@ -1,1 +1,7 @@
-{"total_generated": 500, "accepted": 500, "rejected": 0}
+{
+  "total_generated": 288,
+  "accepted": 288,
+  "rejected": 0,
+  "rejection_rate": 0.0,
+  "rejection_reasons": []
+}

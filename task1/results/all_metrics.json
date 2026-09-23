@@ -1,148 +1,160 @@
 {
   "step1_clean": {
     "ResNet-50": {
-      "accuracy": 0.9135135135135135,
-      "macro_f1": 0.9132555205685027,
-      "mean_max_conf": 0.7792235612869263
+      "accuracy": 0.91,
+      "macro_f1": 0.9105234070339018,
+      "mean_max_conf": 0.6392163038253784
     },
     "ViT-B/16": {
-      "accuracy": 0.9248648648648649,
-      "macro_f1": 0.924625508618767,
-      "mean_max_conf": 0.8944399356842041
+      "accuracy": 0.93,
+      "macro_f1": 0.9303660282108558,
+      "mean_max_conf": 0.8589292168617249
     },
     "CLIP": {
-      "accuracy": 0.7794594594594595,
-      "macro_f1": 0.7782506441486411,
-      "mean_max_conf": 0.05904414504766464
+      "accuracy": 0.754,
+      "macro_f1": 0.7514207932844371,
+      "mean_max_conf": 0.04610162973403931
     }
   },
   "step1_clip_zeroshot": {
-    "accuracy": 0.7372972972972973,
-    "macro_f1": 0.7157998550875901,
-    "mean_max_conf": 0.7261892557144165
+    "accuracy": 0.738,
+    "macro_f1": 0.7156497216211414,
+    "mean_max_conf": 0.7253135442733765
   },
   "step2_color": {
     "ResNet-50": {
-      "grayscale_acc": 0.8502702702702702,
-      "grayscale_consistency": 0.8762162162162163,
-      "hue_acc": 0.8021621621621622,
-      "hue_consistency": 0.8291891891891892
+      "grayscale_acc": 0.856,
+      "grayscale_consistency": 0.874,
+      "hue_acc": 0.798,
+      "hue_consistency": 0.842
     },
     "ViT-B/16": {
-      "grayscale_acc": 0.874054054054054,
-      "grayscale_consistency": 0.8956756756756756,
-      "hue_acc": 0.8308108108108108,
-      "hue_consistency": 0.8432432432432433
+      "grayscale_acc": 0.884,
+      "grayscale_consistency": 0.924,
+      "hue_acc": 0.848,
+      "hue_consistency": 0.856
     },
     "CLIP": {
-      "grayscale_acc": 0.6718918918918919,
-      "grayscale_consistency": 0.7486486486486487,
-      "hue_acc": 0.5848648648648649,
-      "hue_consistency": 0.6497297297297298
+      "grayscale_acc": 0.648,
+      "grayscale_consistency": 0.742,
+      "hue_acc": 0.548,
+      "hue_consistency": 0.606
     }
   },
   "step3_cue_conflicts": {
     "ResNet-50": {
-      "shape_bias": 93.84965831435079,
-      "coverage": 87.8
+      "shape_bias": 91.92546583850931,
+      "coverage": 55.90277777777778,
+      "n_shape": 148,
+      "n_texture": 13,
+      "n_other": 127,
+      "n_total": 288
     },
     "ViT-B/16": {
-      "shape_bias": 94.70338983050848,
-      "coverage": 94.39999999999999
+      "shape_bias": 96.34703196347031,
+      "coverage": 76.04166666666666,
+      "n_shape": 211,
+      "n_texture": 8,
+      "n_other": 69,
+      "n_total": 288
     },
     "CLIP": {
-      "shape_bias": 88.11881188118812,
-      "coverage": 80.80000000000001
+      "shape_bias": 90.6832298136646,
+      "coverage": 55.90277777777778,
+      "n_shape": 146,
+      "n_texture": 15,
+      "n_other": 127,
+      "n_total": 288
     }
   },
   "step4_translation": {
     "ResNet-50": {
       "0": {
-        "acc": 0.9135135135135135,
+        "acc": 0.91,
         "consistency": 1.0
       },
       "8": {
-        "acc": 0.9133783783783784,
-        "consistency": 0.9702702702702704
+        "acc": 0.9095,
+        "consistency": 0.969
       },
       "16": {
-        "acc": 0.9100000000000001,
-        "consistency": 0.965
+        "acc": 0.905,
+        "consistency": 0.9644999999999999
       },
       "32": {
-        "acc": 0.902972972972973,
-        "consistency": 0.9597297297297298
+        "acc": 0.9045000000000001,
+        "consistency": 0.9589999999999999
       }
     },
     "ViT-B/16": {
       "0": {
-        "acc": 0.9248648648648649,
+        "acc": 0.93,
         "consistency": 1.0
       },
       "8": {
-        "acc": 0.9263513513513513,
-        "consistency": 0.9644594594594595
+        "acc": 0.9255,
+        "consistency": 0.971
       },
       "16": {
-        "acc": 0.9243243243243243,
-        "consistency": 0.9735135135135136
+        "acc": 0.9255000000000001,
+        "consistency": 0.982
       },
       "32": {
-        "acc": 0.9237837837837838,
-        "consistency": 0.9601351351351352
+        "acc": 0.9205,
+        "consistency": 0.96
       }
     },
     "CLIP": {
       "0": {
-        "acc": 0.7794594594594595,
+        "acc": 0.754,
         "consistency": 1.0
       },
       "8": {
-        "acc": 0.7767567567567568,
-        "consistency": 0.8971621621621623
+        "acc": 0.749,
+        "consistency": 0.884
       },
       "16": {
-        "acc": 0.7702702702702703,
-        "consistency": 0.8718918918918919
+        "acc": 0.7509999999999999,
+        "consistency": 0.8694999999999999
       },
       "32": {
-        "acc": 0.7575675675675676,
-        "consistency": 0.8995945945945946
+        "acc": 0.732,
+        "consistency": 0.8945000000000001
       }
     }
   },
   "step5_patch": {
     "ResNet-50": {
-      "acc": 0.7421621621621621,
-      "consistency": 0.7648648648648648
+      "acc": 0.732,
+      "consistency": 0.754
     },
     "ViT-B/16": {
-      "acc": 0.8059459459459459,
-      "consistency": 0.8227027027027027
+      "acc": 0.84,
+      "consistency": 0.856
     },
     "CLIP": {
-      "acc": 0.46,
-      "consistency": 0.5118918918918919
+      "acc": 0.428,
+      "consistency": 0.476
     }
   },
   "step6_stability": {
     "ResNet-50": {
-      "gray": 0.8468223214149475,
-      "patch": 0.6799931526184082,
-      "translation_32": 0.940525472164154,
-      "cue_conflict": 0.7763322591781616
+      "gray": 0.8474156260490417,
+      "patch": 0.6793807148933411,
+      "translation_32": 0.9411130547523499,
+      "cue_conflict": 0.5321742296218872
     },
     "ViT-B/16": {
-      "gray": 0.7915018796920776,
-      "patch": 0.6599196791648865,
-      "translation_32": 0.9353621006011963,
-      "cue_conflict": 0.7883774638175964
+      "gray": 0.7920970320701599,
+      "patch": 0.6873987913131714,
+      "translation_32": 0.9338541030883789,
+      "cue_conflict": 0.5715914368629456
     },
     "CLIP": {
-      "gray": 0.9051220417022705,
-      "patch": 0.775526762008667,
-      "translation_32": 0.9703714847564697,
-      "cue_conflict": 0.8815568089485168
+      "gray": 0.9033812284469604,
+      "patch": 0.7769770622253418,
+      "translation_32": 0.9704833626747131,
+      "cue_conflict": 0.8073503971099854
     }
   }
 }
