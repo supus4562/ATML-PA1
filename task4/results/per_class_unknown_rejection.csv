@@ -1,0 +1,17 @@
+split,unknown_class,total_samples,accepted_count,rejected_count,rejection_rate,fpr_at_95tpr,top_cifar10_confusion
+near,bus,100,60,40,40.0,60.0,horse
+near,camel,100,53,47,47.0,53.0,horse
+near,fox,100,65,35,35.0,65.0,deer
+near,leopard,100,62,38,38.0,62.0,cat
+near,motorcycle,100,45,55,55.0,45.0,automobile
+near,pickup_truck,100,84,16,16.0,84.0,automobile
+near,tractor,100,60,40,40.0,60.0,truck
+near,wolf,100,72,28,28.0,72.0,cat
+far,bottle,100,48,52,52.0,48.0,cat
+far,bowl,100,62,38,38.0,62.0,cat
+far,chair,100,47,53,53.0,47.0,airplane
+far,clock,100,40,60,60.0,40.0,automobile
+far,keyboard,100,46,54,54.0,46.0,cat
+far,mushroom,100,56,44,44.0,56.0,bird
+far,sunflower,100,52,48,48.0,52.0,cat
+far,wardrobe,100,84,16,16.0,84.0,truck

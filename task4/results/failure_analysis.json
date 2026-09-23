@@ -1,0 +1,339 @@
+{
+    "threshold": -5.292938709259033,
+    "near_failures_count": 501,
+    "far_failures_count": 435,
+    "top_near_failures": [
+        {
+            "index": 505,
+            "split": "near",
+            "unknown_class": "camel",
+            "cifar10_predicted_class": "deer",
+            "score": -13.3916,
+            "threshold": -5.2929,
+            "margin": 8.0986,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'camel' shares strong visual/semantic features with CIFAR-10 'deer', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 740,
+            "split": "near",
+            "unknown_class": "wolf",
+            "cifar10_predicted_class": "cat",
+            "score": -12.7226,
+            "threshold": -5.2929,
+            "margin": 7.4297,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'wolf' shares strong visual/semantic features with CIFAR-10 'cat', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 534,
+            "split": "near",
+            "unknown_class": "bus",
+            "cifar10_predicted_class": "deer",
+            "score": -12.623,
+            "threshold": -5.2929,
+            "margin": 7.3301,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'bus' is visually distant from CIFAR-10 'deer', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 59,
+            "split": "near",
+            "unknown_class": "wolf",
+            "cifar10_predicted_class": "dog",
+            "score": -12.3304,
+            "threshold": -5.2929,
+            "margin": 7.0375,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'wolf' shares strong visual/semantic features with CIFAR-10 'dog', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 311,
+            "split": "near",
+            "unknown_class": "leopard",
+            "cifar10_predicted_class": "dog",
+            "score": -12.2775,
+            "threshold": -5.2929,
+            "margin": 6.9846,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'leopard' shares strong visual/semantic features with CIFAR-10 'dog', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 197,
+            "split": "near",
+            "unknown_class": "fox",
+            "cifar10_predicted_class": "deer",
+            "score": -12.0355,
+            "threshold": -5.2929,
+            "margin": 6.7426,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'fox' is visually distant from CIFAR-10 'deer', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 176,
+            "split": "near",
+            "unknown_class": "bus",
+            "cifar10_predicted_class": "dog",
+            "score": -11.7587,
+            "threshold": -5.2929,
+            "margin": 6.4657,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'bus' is visually distant from CIFAR-10 'dog', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 695,
+            "split": "near",
+            "unknown_class": "fox",
+            "cifar10_predicted_class": "cat",
+            "score": -11.4832,
+            "threshold": -5.2929,
+            "margin": 6.1902,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'fox' shares strong visual/semantic features with CIFAR-10 'cat', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 716,
+            "split": "near",
+            "unknown_class": "tractor",
+            "cifar10_predicted_class": "ship",
+            "score": -11.3705,
+            "threshold": -5.2929,
+            "margin": 6.0775,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'tractor' is visually distant from CIFAR-10 'ship', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 743,
+            "split": "near",
+            "unknown_class": "leopard",
+            "cifar10_predicted_class": "frog",
+            "score": -11.3343,
+            "threshold": -5.2929,
+            "margin": 6.0413,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'leopard' is visually distant from CIFAR-10 'frog', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 324,
+            "split": "near",
+            "unknown_class": "pickup_truck",
+            "cifar10_predicted_class": "truck",
+            "score": -11.285,
+            "threshold": -5.2929,
+            "margin": 5.9921,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'pickup_truck' shares strong visual/semantic features with CIFAR-10 'truck', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 782,
+            "split": "near",
+            "unknown_class": "wolf",
+            "cifar10_predicted_class": "cat",
+            "score": -11.2136,
+            "threshold": -5.2929,
+            "margin": 5.9207,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'wolf' shares strong visual/semantic features with CIFAR-10 'cat', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 367,
+            "split": "near",
+            "unknown_class": "fox",
+            "cifar10_predicted_class": "horse",
+            "score": -11.1016,
+            "threshold": -5.2929,
+            "margin": 5.8087,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'fox' is visually distant from CIFAR-10 'horse', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 584,
+            "split": "near",
+            "unknown_class": "pickup_truck",
+            "cifar10_predicted_class": "automobile",
+            "score": -11.0609,
+            "threshold": -5.2929,
+            "margin": 5.768,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'pickup_truck' shares strong visual/semantic features with CIFAR-10 'automobile', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 507,
+            "split": "near",
+            "unknown_class": "tractor",
+            "cifar10_predicted_class": "truck",
+            "score": -11.0605,
+            "threshold": -5.2929,
+            "margin": 5.7676,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'tractor' shares strong visual/semantic features with CIFAR-10 'truck', causing the closed-set classifier to absorb the unknown with high logit response."
+        }
+    ],
+    "top_far_failures": [
+        {
+            "index": 476,
+            "split": "far",
+            "unknown_class": "sunflower",
+            "cifar10_predicted_class": "cat",
+            "score": -15.0684,
+            "threshold": -5.2929,
+            "margin": 9.7755,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'sunflower' is visually distant from CIFAR-10 'cat', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 774,
+            "split": "far",
+            "unknown_class": "bowl",
+            "cifar10_predicted_class": "ship",
+            "score": -13.3878,
+            "threshold": -5.2929,
+            "margin": 8.0949,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'bowl' shares strong visual/semantic features with CIFAR-10 'ship', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 692,
+            "split": "far",
+            "unknown_class": "keyboard",
+            "cifar10_predicted_class": "airplane",
+            "score": -13.1495,
+            "threshold": -5.2929,
+            "margin": 7.8566,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'keyboard' is visually distant from CIFAR-10 'airplane', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 498,
+            "split": "far",
+            "unknown_class": "sunflower",
+            "cifar10_predicted_class": "airplane",
+            "score": -12.3246,
+            "threshold": -5.2929,
+            "margin": 7.0316,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'sunflower' is visually distant from CIFAR-10 'airplane', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 683,
+            "split": "far",
+            "unknown_class": "sunflower",
+            "cifar10_predicted_class": "airplane",
+            "score": -12.3177,
+            "threshold": -5.2929,
+            "margin": 7.0248,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'sunflower' is visually distant from CIFAR-10 'airplane', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 326,
+            "split": "far",
+            "unknown_class": "bottle",
+            "cifar10_predicted_class": "cat",
+            "score": -12.0876,
+            "threshold": -5.2929,
+            "margin": 6.7947,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'bottle' is visually distant from CIFAR-10 'cat', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 295,
+            "split": "far",
+            "unknown_class": "mushroom",
+            "cifar10_predicted_class": "frog",
+            "score": -12.0661,
+            "threshold": -5.2929,
+            "margin": 6.7731,
+            "failure_category": "Semantically Plausible",
+            "explanation": "Class 'mushroom' shares strong visual/semantic features with CIFAR-10 'frog', causing the closed-set classifier to absorb the unknown with high logit response."
+        },
+        {
+            "index": 713,
+            "split": "far",
+            "unknown_class": "sunflower",
+            "cifar10_predicted_class": "cat",
+            "score": -11.9554,
+            "threshold": -5.2929,
+            "margin": 6.6625,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'sunflower' is visually distant from CIFAR-10 'cat', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 264,
+            "split": "far",
+            "unknown_class": "sunflower",
+            "cifar10_predicted_class": "cat",
+            "score": -11.3769,
+            "threshold": -5.2929,
+            "margin": 6.084,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'sunflower' is visually distant from CIFAR-10 'cat', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 453,
+            "split": "far",
+            "unknown_class": "sunflower",
+            "cifar10_predicted_class": "cat",
+            "score": -11.2693,
+            "threshold": -5.2929,
+            "margin": 5.9764,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'sunflower' is visually distant from CIFAR-10 'cat', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 489,
+            "split": "far",
+            "unknown_class": "bowl",
+            "cifar10_predicted_class": "automobile",
+            "score": -11.2527,
+            "threshold": -5.2929,
+            "margin": 5.9598,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'bowl' is visually distant from CIFAR-10 'automobile', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 107,
+            "split": "far",
+            "unknown_class": "wardrobe",
+            "cifar10_predicted_class": "truck",
+            "score": -11.0691,
+            "threshold": -5.2929,
+            "margin": 5.7762,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'wardrobe' is visually distant from CIFAR-10 'truck', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 686,
+            "split": "far",
+            "unknown_class": "wardrobe",
+            "cifar10_predicted_class": "truck",
+            "score": -11.0383,
+            "threshold": -5.2929,
+            "margin": 5.7453,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'wardrobe' is visually distant from CIFAR-10 'truck', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 388,
+            "split": "far",
+            "unknown_class": "clock",
+            "cifar10_predicted_class": "truck",
+            "score": -10.9749,
+            "threshold": -5.2929,
+            "margin": 5.682,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'clock' is visually distant from CIFAR-10 'truck', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        },
+        {
+            "index": 409,
+            "split": "far",
+            "unknown_class": "wardrobe",
+            "cifar10_predicted_class": "truck",
+            "score": -10.938,
+            "threshold": -5.2929,
+            "margin": 5.6451,
+            "failure_category": "Surprising Failure",
+            "explanation": "Class 'wardrobe' is visually distant from CIFAR-10 'truck', indicating high-confidence aliasing on background textures, spurious edges, or unconstrained open space."
+        }
+    ]
+}

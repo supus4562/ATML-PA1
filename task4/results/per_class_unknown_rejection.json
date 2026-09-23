@@ -1,0 +1,162 @@
+[
+  {
+    "split": "near",
+    "unknown_class": "bus",
+    "total_samples": 100,
+    "accepted_count": 60,
+    "rejected_count": 40,
+    "rejection_rate": 40.0,
+    "fpr_at_95tpr": 60.0,
+    "top_cifar10_confusion": "horse"
+  },
+  {
+    "split": "near",
+    "unknown_class": "camel",
+    "total_samples": 100,
+    "accepted_count": 53,
+    "rejected_count": 47,
+    "rejection_rate": 47.0,
+    "fpr_at_95tpr": 53.0,
+    "top_cifar10_confusion": "horse"
+  },
+  {
+    "split": "near",
+    "unknown_class": "fox",
+    "total_samples": 100,
+    "accepted_count": 65,
+    "rejected_count": 35,
+    "rejection_rate": 35.0,
+    "fpr_at_95tpr": 65.0,
+    "top_cifar10_confusion": "deer"
+  },
+  {
+    "split": "near",
+    "unknown_class": "leopard",
+    "total_samples": 100,
+    "accepted_count": 62,
+    "rejected_count": 38,
+    "rejection_rate": 38.0,
+    "fpr_at_95tpr": 62.0,
+    "top_cifar10_confusion": "cat"
+  },
+  {
+    "split": "near",
+    "unknown_class": "motorcycle",
+    "total_samples": 100,
+    "accepted_count": 45,
+    "rejected_count": 55,
+    "rejection_rate": 55.0,
+    "fpr_at_95tpr": 45.0,
+    "top_cifar10_confusion": "automobile"
+  },
+  {
+    "split": "near",
+    "unknown_class": "pickup_truck",
+    "total_samples": 100,
+    "accepted_count": 84,
+    "rejected_count": 16,
+    "rejection_rate": 16.0,
+    "fpr_at_95tpr": 84.0,
+    "top_cifar10_confusion": "automobile"
+  },
+  {
+    "split": "near",
+    "unknown_class": "tractor",
+    "total_samples": 100,
+    "accepted_count": 60,
+    "rejected_count": 40,
+    "rejection_rate": 40.0,
+    "fpr_at_95tpr": 60.0,
+    "top_cifar10_confusion": "truck"
+  },
+  {
+    "split": "near",
+    "unknown_class": "wolf",
+    "total_samples": 100,
+    "accepted_count": 72,
+    "rejected_count": 28,
+    "rejection_rate": 28.0,
+    "fpr_at_95tpr": 72.0,
+    "top_cifar10_confusion": "cat"
+  },
+  {
+    "split": "far",
+    "unknown_class": "bottle",
+    "total_samples": 100,
+    "accepted_count": 48,
+    "rejected_count": 52,
+    "rejection_rate": 52.0,
+    "fpr_at_95tpr": 48.0,
+    "top_cifar10_confusion": "cat"
+  },
+  {
+    "split": "far",
+    "unknown_class": "bowl",
+    "total_samples": 100,
+    "accepted_count": 62,
+    "rejected_count": 38,
+    "rejection_rate": 38.0,
+    "fpr_at_95tpr": 62.0,
+    "top_cifar10_confusion": "cat"
+  },
+  {
+    "split": "far",
+    "unknown_class": "chair",
+    "total_samples": 100,
+    "accepted_count": 47,
+    "rejected_count": 53,
+    "rejection_rate": 53.0,
+    "fpr_at_95tpr": 47.0,
+    "top_cifar10_confusion": "airplane"
+  },
+  {
+    "split": "far",
+    "unknown_class": "clock",
+    "total_samples": 100,
+    "accepted_count": 40,
+    "rejected_count": 60,
+    "rejection_rate": 60.0,
+    "fpr_at_95tpr": 40.0,
+    "top_cifar10_confusion": "automobile"
+  },
+  {
+    "split": "far",
+    "unknown_class": "keyboard",
+    "total_samples": 100,
+    "accepted_count": 46,
+    "rejected_count": 54,
+    "rejection_rate": 54.0,
+    "fpr_at_95tpr": 46.0,
+    "top_cifar10_confusion": "cat"
+  },
+  {
+    "split": "far",
+    "unknown_class": "mushroom",
+    "total_samples": 100,
+    "accepted_count": 56,
+    "rejected_count": 44,
+    "rejection_rate": 44.0,
+    "fpr_at_95tpr": 56.0,
+    "top_cifar10_confusion": "bird"
+  },
+  {
+    "split": "far",
+    "unknown_class": "sunflower",
+    "total_samples": 100,
+    "accepted_count": 52,
+    "rejected_count": 48,
+    "rejection_rate": 48.0,
+    "fpr_at_95tpr": 52.0,
+    "top_cifar10_confusion": "cat"
+  },
+  {
+    "split": "far",
+    "unknown_class": "wardrobe",
+    "total_samples": 100,
+    "accepted_count": 84,
+    "rejected_count": 16,
+    "rejection_rate": 16.0,
+    "fpr_at_95tpr": 84.0,
+    "top_cifar10_confusion": "truck"
+  }
+]
