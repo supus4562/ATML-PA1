@@ -1,4 +1,7 @@
 defaults: [base]
 method: cdan
+# PA spec: "same hidden width, activation, dropout, gradient-reversal schedule, and loss weight used for DANN"
 combined_dim: 3584
 checkpoint_path: task2/results/cdan_checkpoint.pth
+lambda_adv: 1.0
+disc_lr: 1.0e-4
