@@ -360,17 +360,25 @@ def main() -> None:
 
     # ── Step 3 prep: cue conflicts (done once for all models) ───────────────────
     print("[task1] Generating AdaIN cue conflicts ...")
+    # Oxford-IIIT Pet 37 confirmed class names (from torchvision dataset .classes).
+    # Cats: Abyssinian Bengal Birman Bombay British_Shorthair Egyptian_Mau Maine_Coon
+    #        Persian Ragdoll Russian_Blue Siamese Sphynx
+    # Dogs: american_bulldog american_pit_bull_terrier basset_hound beagle boxer
+    #        chihuahua english_cocker_spaniel english_setter german_shorthaired
+    #        great_pyrenees havanese japanese_chin keeshond leonberger miniature_pinscher
+    #        newfoundland pomeranian pug saint_bernard samoyed scottish_terrier
+    #        shiba_inu staffordshire_bull_terrier wheaten_terrier yorkshire_terrier
     pairs = [
-        # Distinct Cat Texture/Pattern Pairs
-        ("Abyssinian", "Bengal"),
-        ("Birman", "Ragdoll"),
-        ("Persian", "Siamese"),
-        ("British_Shorthair", "Egyptian_Mau"),
-        # Distinct Dog Fur/Shape Pairs
-        ("Beagle", "Boxer"),
-        ("Chihuahua", "Pug"),
-        ("Samoyed", "Keeshond"),
-        ("Saint_Bernard", "Newfoundland"),
+        # 4 Cat Pairs (visually distinct textures/patterns)
+        ("Abyssinian", "Bengal"),           # ticked vs. spotted
+        ("Persian", "Siamese"),             # fluffy vs. sleek
+        ("Bombay", "Maine_Coon"),           # black short-hair vs. long fluffy
+        ("Ragdoll", "Russian_Blue"),        # light bicolor vs. blue-grey
+        # 4 Dog Pairs (visually distinct fur/body shape)
+        ("beagle", "boxer"),               # scent-hound vs. brachycephalic
+        ("chihuahua", "pug"),              # tiny slim vs. stocky wrinkled
+        ("samoyed", "keeshond"),           # white fluffy vs. grey wolfspitz
+        ("newfoundland", "saint_bernard"), # giant water-dog vs. giant alpine-dog
     ]
     conflicts = generate_cue_conflicts(
         test_dataset, subset_indices, pairs, config["cue_conflicts"], device

@@ -257,13 +257,25 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
 
     class_to_idx = {name: i for i, name in enumerate(classes)}
 
+    # Debug: print available class names
+    print(f"[AdaIN] Dataset has {len(classes)} classes. First 10: {classes[:10]}")
+
     # Target minimum 200 conflicts (e.g. 18 per directed pair across 16 directed pairs = 288 planned)
     target_total = int(config.get('target_total', 200))
     n_directed_pairs = len(pairs) * 2
     per_pair_target = max(18, (target_total // n_directed_pairs) + 4)
 
     tasks = []
+    skipped_pairs = []
     for c1_name, c2_name in pairs:
+        if c1_name not in class_to_idx:
+            print(f"[AdaIN] WARNING: class '{c1_name}' not found in dataset, skipping pair ({c1_name}, {c2_name})")
+            skipped_pairs.append((c1_name, c2_name))
+            continue
+        if c2_name not in class_to_idx:
+            print(f"[AdaIN] WARNING: class '{c2_name}' not found in dataset, skipping pair ({c1_name}, {c2_name})")
+            skipped_pairs.append((c1_name, c2_name))
+            continue
         c1 = class_to_idx[c1_name]
         c2 = class_to_idx[c2_name]
         for c_content, c_style in [(c1, c2), (c2, c1)]:
@@ -275,6 +287,10 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
                 content_idx = c_content_idxs[i % len(c_content_idxs)]
                 style_idx = c_style_idxs[(i * 3 + 7) % len(c_style_idxs)]
                 tasks.append((c_content, c_style, content_idx, style_idx))
+
+    if skipped_pairs:
+        print(f"[AdaIN] Skipped {len(skipped_pairs)} pairs due to unknown class names.")
+        print(f"[AdaIN] All available classes: {sorted(classes)}")
 
     style_strength = float(config.get('style_strength', 0.85))
     batch_size = int(config.get('batch_size', 32))
