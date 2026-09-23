@@ -381,6 +381,10 @@ def main() -> None:
             c_orig.resize((224, 224), Image.BILINEAR).save(
                 os.path.join(report_img_dir, f"cue_conflict_content_{c['content_class']}_{i}.jpg")
             )
+            s_orig, _ = test_dataset[c['style_idx']]
+            s_orig.resize((224, 224), Image.BILINEAR).save(
+                os.path.join(report_img_dir, f"cue_conflict_style_{c['style_class']}_{i}.jpg")
+            )
 
     # ── Metrics storage ────────────────────────────────────────────────────────
     metrics: dict = {
