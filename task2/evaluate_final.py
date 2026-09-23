@@ -76,13 +76,16 @@ VAL_TRANSFORM = transforms.Compose([
 
 # ── Method display names ──────────────────────────────────────────────────────
 METHOD_LABELS = {
-    "source_only":       "Source-only (ERM)",
-    "dan":               "DAN (λ=1)",
-    "dan_lmmd0.1":       "DAN (λ=0.1)",
-    "dan_lmmd1.0":       "DAN (λ=1.0)",
-    "dan_lmmd10.0":      "DAN (λ=10)",
-    "dann":              "DANN",
-    "cdan":              "CDAN",
+    "source_only":        "Source-only (ERM)",
+    "dan":                "DAN (λ=1)",
+    "dan_lmmd0.1":        "DAN (λ=0.1)",
+    "dan_lmmd1.0":        "DAN (λ=1.0)",
+    "dan_lmmd10.0":       "DAN (λ=10)",
+    "dann":               "DANN (α_max=1.0)",
+    "dann_alpha0.25":     "DANN (α_max=0.25)",
+    "dann_alpha0.5":      "DANN (α_max=0.50)",
+    "dann_alpha1.0":      "DANN (α_max=1.0)",
+    "cdan":               "CDAN",
 }
 
 
@@ -269,6 +272,61 @@ def plot_controlled_study(all_results: dict, output_dir: str) -> None:
     tqdm.write(f"  [saved] {out}")
 
 
+
+def plot_controlled_study_dann(all_results: dict, output_dir: str) -> None:
+    """Plot DANN controlled study: target acc + domain separability vs max_alpha.
+
+    PA spec option: vary maximum GRL strength in {0.25, 0.5, 1.0}
+    """
+    study_data = {}
+    for alpha, key in [(0.25, "dann_alpha0.25"), (0.5, "dann_alpha0.5"), (1.0, "dann")]:
+        actual = key if key in all_results else (
+            "dann_alpha1.0" if alpha == 1.0 and "dann_alpha1.0" in all_results else None
+        )
+        if actual and actual in all_results:
+            study_data[alpha] = all_results[actual]
+
+    if len(study_data) < 2:
+        tqdm.write("[controlled_study_dann] Not enough DANN alpha variants found — skipping.")
+        return
+
+    alphas      = sorted(study_data.keys())
+    target_accs = [study_data[a]["target_acc"]         for a in alphas]
+    dom_seps    = [study_data[a]["domain_separability"] for a in alphas]
+    src_accs    = [study_data[a]["mean_source_val_acc"] for a in alphas]
+
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(14, 4))
+    x_ticks = list(range(len(alphas)))
+    xlabels = [f"α_max={a}" for a in alphas]
+
+    def _bar(ax, values, ylabel, title, color):
+        bars = ax.bar(x_ticks, values, color=color, alpha=0.8, edgecolor="white")
+        for bar, v in zip(bars, values):
+            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
+                    f"{v:.3f}", ha="center", va="bottom", fontsize=9)
+        ax.set_xticks(x_ticks)
+        ax.set_xticklabels(xlabels)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.set_ylim(0, 1.1)
+
+    _bar(ax1, target_accs, "Target (Sketch) Accuracy",
+         "DANN: Target Acc vs α_max", "steelblue")
+    _bar(ax2, dom_seps,    "Domain Separability",
+         "DANN: Domain Sep vs α_max", "tomato")
+    _bar(ax3, src_accs,    "Mean Source Val Accuracy",
+         "DANN: Source Acc vs α_max", "seagreen")
+
+    fig.suptitle(
+        "Controlled DANN Design Study — α_max ∈ {0.25, 0.5, 1.0}\n"
+        "(Main comparison uses α_max=1.0; target results for analysis only)",
+        fontsize=11,
+    )
+    out = os.path.join(output_dir, "figures", "controlled_study_dann_alpha.png")
+    savefig(out, fig)
+    tqdm.write(f"  [saved] {out}")
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
@@ -408,8 +466,11 @@ def main() -> None:
                 os.path.join(args.output_dir, "figures", "per_class_delta.png"),
             )
 
-    # ── Controlled DAN study figure ───────────────────────────────────────────
+    # ── Controlled study figures ──────────────────────────────────────────────
+    # DAN: λ_MMD ∈ {0.1, 1, 10}
     plot_controlled_study(all_results, args.output_dir)
+    # DANN: α_max ∈ {0.25, 0.5, 1.0}  (only if those runs exist)
+    plot_controlled_study_dann(all_results, args.output_dir)
 
     # ── Save final_results.json ───────────────────────────────────────────────
     json_path = os.path.join(args.output_dir, "final_results.json")

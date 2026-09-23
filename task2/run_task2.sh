@@ -115,11 +115,28 @@ if [[ $EVAL_ONLY -eq 0 ]]; then
             --pacs_root "$PACS_ROOT" \
             --lambda_mmd 10.0
 
-    # ── Step 5: DANN ──────────────────────────────────────────────────────────
-    run_step "DANN — Adversarial alignment (λ_adv=1.0, single-pass GRL)" \
+    # ── Step 5: DANN main comparison (α_max=1.0) ─────────────────────────────
+    run_step "DANN — Adversarial alignment (λ_adv=1.0, α_max=1.0, single-pass GRL)" \
         python task2/train.py \
             --config task2/configs/dann.yaml \
             --pacs_root "$PACS_ROOT"
+
+    # ── Step 5b: DANN controlled study (α_max=0.25, 0.5) ─────────────────────
+    # Spec option: "vary the maximum gradient-reversal strength over {0.25, 0.5, 1}"
+    # These are OPTIONAL — only needed if you choose DANN alpha as your controlled study
+    # (vs the DAN lambda study above). Uncomment if needed:
+    #
+    # run_step "DANN — α_max=0.25 (controlled study)" \
+    #     python task2/train.py \
+    #         --config task2/configs/dann.yaml \
+    #         --pacs_root "$PACS_ROOT" \
+    #         --max_alpha 0.25
+    #
+    # run_step "DANN — α_max=0.5 (controlled study)" \
+    #     python task2/train.py \
+    #         --config task2/configs/dann.yaml \
+    #         --pacs_root "$PACS_ROOT" \
+    #         --max_alpha 0.5
 
     # ── Step 6: CDAN ──────────────────────────────────────────────────────────
     run_step "CDAN — Class-conditional adversarial alignment (λ_adv=1.0)" \
@@ -140,11 +157,12 @@ echo "  Task 2 COMPLETE"
 echo "  End: $(date)"
 echo ""
 echo "  Key outputs:"
-echo "    $OUTPUT_DIR/final_results.csv          — main comparison table"
-echo "    $OUTPUT_DIR/per_class_results.csv      — per-class Sketch accuracy"
-echo "    $OUTPUT_DIR/top_confusions.csv         — top-5 confusion pairs"
+echo "    $OUTPUT_DIR/final_results.csv                     — main table"
+echo "    $OUTPUT_DIR/per_class_results.csv                 — per-class Sketch acc"
+echo "    $OUTPUT_DIR/top_confusions.csv                    — failure analysis"
 echo "    $OUTPUT_DIR/figures/per_class_delta.png"
-echo "    $OUTPUT_DIR/figures/controlled_study_lambda_mmd.png"
+echo "    $OUTPUT_DIR/figures/controlled_study_lambda_mmd.png  — DAN study"
+echo "    $OUTPUT_DIR/figures/controlled_study_dann_alpha.png  — DANN study (if run)"
 echo "    $OUTPUT_DIR/figures/{method}_confusion.png"
 echo "    $OUTPUT_DIR/figures/{method}_curves.png"
 echo "================================================================"

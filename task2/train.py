@@ -77,7 +77,9 @@ def main() -> None:
     parser.add_argument("--config", required=True, help="Path to method config YAML")
     parser.add_argument("--pacs_root", default=None, help="Override PACS root directory")
     parser.add_argument("--lambda_mmd", type=float, default=None,
-                        help="Override lambda_mmd (DAN controlled study)")
+                        help="Override lambda_mmd (DAN controlled study: {0.1, 1, 10})")
+    parser.add_argument("--max_alpha", type=float, default=None,
+                        help="Cap GRL max alpha (DANN controlled study: {0.25, 0.5, 1.0})")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -85,6 +87,8 @@ def main() -> None:
         config["pacs_root"] = args.pacs_root
     if args.lambda_mmd is not None and "lambda_mmd" in config:
         config["lambda_mmd"] = args.lambda_mmd
+    if args.max_alpha is not None:
+        config["max_alpha"] = args.max_alpha
 
     if not config.get("pacs_root"):
         raise ValueError("pacs_root must be set via config or --pacs_root")
@@ -143,12 +147,20 @@ def main() -> None:
 
     # ── Trainer ───────────────────────────────────────────────────────────────
     method = config["method"]
-    # Build checkpoint path (handle controlled study lambda variants)
+    # Build checkpoint path (handle controlled study variants)
     if method == "dan" and args.lambda_mmd is not None:
         lmbd_tag = f"_lmmd{args.lambda_mmd}"
-        base_ckpt = config.get("checkpoint_path", f"task2/results/dan_checkpoint.pth")
+        base_ckpt = config.get("checkpoint_path", "task2/results/dan_checkpoint.pth")
         base, ext = os.path.splitext(base_ckpt)
         config["checkpoint_path"] = f"{base}{lmbd_tag}{ext}"
+        config["curves_key"] = f"dan_lmmd{args.lambda_mmd}"
+
+    if method == "dann" and args.max_alpha is not None and args.max_alpha != 1.0:
+        alpha_tag = f"_alpha{args.max_alpha}"
+        base_ckpt = config.get("checkpoint_path", "task2/results/dann_checkpoint.pth")
+        base, ext = os.path.splitext(base_ckpt)
+        config["checkpoint_path"] = f"{base}{alpha_tag}{ext}"
+        config["curves_key"] = f"dann_alpha{args.max_alpha}"
 
     os.makedirs(os.path.dirname(os.path.abspath(
         config.get("checkpoint_path", f"task2/results/{method}_checkpoint.pth")

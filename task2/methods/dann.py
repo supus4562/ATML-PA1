@@ -52,6 +52,11 @@ class DANNTrainer:
             weight_decay=config["weight_decay"],
         )
 
+        # max_alpha caps the GRL schedule: alpha(p) = min(schedule(p), max_alpha)
+        # PA controlled study option: vary max_alpha in {0.25, 0.5, 1.0}
+        # Main comparison must use max_alpha=1.0 (default).
+        self.max_alpha = config.get("max_alpha", 1.0)
+
     # ------------------------------------------------------------------
     def train(self, source_loaders, target_loader, val_loaders):
         best_val_f1     = 0.0
@@ -79,6 +84,7 @@ class DANNTrainer:
                 # ── GRL schedule ──────────────────────────────────────────────
                 p     = current_step / total_steps
                 alpha = 2.0 / (1.0 + math.exp(-10.0 * p)) - 1.0
+                alpha = min(alpha, self.max_alpha)   # cap for controlled study
                 current_step += 1
 
                 # ── Collect source batches (8 per domain) ─────────────────────
