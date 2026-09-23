@@ -9,6 +9,14 @@ import numpy as np
 
 MODEL_NAMES = ["ResNet-50", "ViT-B/16", "CLIP"]
 
+
+def _safe_normalize(x: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
+    """L2-normalize rows of x, guarding against zero-norm vectors."""
+    x = x.float()  # always fp32
+    norm = x.norm(dim=-1, keepdim=True).clamp(min=eps)
+    return x / norm
+
+
 class BackboneExtractor:
     def __init__(self, name: str, device):
         self.name = name
@@ -22,7 +30,6 @@ class BackboneExtractor:
             self.model = vit_b_16(weights=ViT_B_16_Weights.IMAGENET1K_V1)
             self.model.heads = nn.Identity()
             self.transform = ViT_B_16_Weights.IMAGENET1K_V1.transforms()
-            # We'll attach a short-lived forward hook when extracting features
         elif name == "CLIP":
             self.model, _, self.transform = open_clip.create_model_and_transforms('ViT-B-32', pretrained='openai')
         
@@ -37,32 +44,32 @@ class BackboneExtractor:
         if use_amp:
             with torch.amp.autocast(device_type='cuda'):
                 if self.name == "ResNet-50":
-                    return self.model(imgs)
+                    return self.model(imgs).float()
                 elif self.name == "ViT-B/16":
                     features = []
                     def hook(m, inp, out):
-                        features.append(out[:, 0].detach())
+                        features.append(out[:, 0].detach().float())
                     handle = self.model.encoder.ln.register_forward_hook(hook)
                     self.model(imgs)
                     handle.remove()
                     return features[0]
                 elif self.name == "CLIP":
                     feats = self.model.encode_image(imgs)
-                    return feats / feats.norm(dim=-1, keepdim=True)
+                    return _safe_normalize(feats)
         else:
             if self.name == "ResNet-50":
-                return self.model(imgs)
+                return self.model(imgs).float()
             elif self.name == "ViT-B/16":
                 features = []
                 def hook(m, inp, out):
-                    features.append(out[:, 0].detach())
+                    features.append(out[:, 0].detach().float())
                 handle = self.model.encoder.ln.register_forward_hook(hook)
                 self.model(imgs)
                 handle.remove()
                 return features[0]
             elif self.name == "CLIP":
                 feats = self.model.encode_image(imgs)
-                return feats / feats.norm(dim=-1, keepdim=True)
+                return _safe_normalize(feats)
 
     def extract_features(self, dataloader):
         all_feats = []
@@ -70,7 +77,7 @@ class BackboneExtractor:
         with torch.no_grad():
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                feats = self._forward_feats(imgs).float()  # ensure float32 even under AMP
+                feats = self._forward_feats(imgs)
                 all_feats.append(feats.cpu())
                 if labels is not None:
                     all_labels.append(labels.cpu())
@@ -143,7 +150,7 @@ class BackboneExtractor:
         with torch.no_grad():
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                feats = self._forward_feats(imgs).float()  # ensure float32 even under AMP
+                feats = self._forward_feats(imgs)
                     
                 logits = self.head(feats)
                 probs = torch.softmax(logits, dim=-1)
@@ -163,25 +170,40 @@ class CLIPZeroShot:
         self.tokenizer = open_clip.get_tokenizer('ViT-B-32')
 
     def predict(self, dataloader, class_names):
+        # Encode text prompts in fp32
         text_inputs = torch.cat([self.tokenizer(f"a photo of a {c}") for c in class_names]).to(self.device)
         with torch.no_grad():
-            text_features = self.model.encode_text(text_inputs)
-            text_features /= text_features.norm(dim=-1, keepdim=True)
-            
+            with torch.amp.autocast(device_type=self.device.type, enabled=(self.device.type == 'cuda')):
+                text_features = self.model.encode_text(text_inputs)
+            text_features = _safe_normalize(text_features)
+
+            # logit_scale: use model's own value, clamped for stability
+            raw_scale = getattr(self.model, 'logit_scale', torch.tensor(4.6052))
+            logit_scale = float(raw_scale.exp().clamp(1.0, 100.0))
+
             all_preds = []
             all_probs = []
             all_labels = []
             
             for imgs, labels in dataloader:
                 imgs = imgs.to(self.device)
-                image_features = self.model.encode_image(imgs)
-                image_features /= image_features.norm(dim=-1, keepdim=True)
-                
-                logit_scale = getattr(self.model, 'logit_scale', torch.tensor(4.6052)).exp()
-                similarity = (logit_scale * image_features @ text_features.T).softmax(dim=-1)
-                all_probs.append(similarity.cpu().numpy())
-                all_preds.append(similarity.argmax(dim=-1).cpu().numpy())
+                with torch.amp.autocast(device_type=self.device.type, enabled=(self.device.type == 'cuda')):
+                    image_features = self.model.encode_image(imgs)
+                image_features = _safe_normalize(image_features)
+
+                # cosine similarity → softmax (all in fp32)
+                logits = logit_scale * (image_features @ text_features.T)
+                probs = logits.float().softmax(dim=-1)
+
+                # Guard: replace any remaining NaN rows with uniform distribution
+                nan_mask = probs.isnan().any(dim=-1)
+                if nan_mask.any():
+                    probs[nan_mask] = 1.0 / len(class_names)
+
+                all_probs.append(probs.cpu().float().numpy())
+                all_preds.append(probs.argmax(dim=-1).cpu().numpy())
                 if labels is not None:
                     all_labels.append(labels.cpu().numpy())
                     
         return np.concatenate(all_preds), np.concatenate(all_probs), (np.concatenate(all_labels) if len(all_labels) > 0 else None)
+
