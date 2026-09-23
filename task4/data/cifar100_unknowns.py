@@ -44,7 +44,7 @@ class CIFAR100Unknowns:
         subset = Subset(self.ds, indices)
         return subset, class_names
 
-    def get_near_loader(self, batch_size=1024, n_per_class=100, num_workers=8, pin_memory=None):
+    def get_near_loader(self, batch_size=4096, n_per_class=100, num_workers=8, pin_memory=None):
         if pin_memory is None:
             pin_memory = torch.cuda.is_available()
         subset, class_names = self._filter_classes(NEAR_CLASSES, n_per_class)
@@ -55,7 +55,7 @@ class CIFAR100Unknowns:
         )
         return loader, class_names
 
-    def get_far_loader(self, batch_size=1024, n_per_class=100, num_workers=8, pin_memory=None):
+    def get_far_loader(self, batch_size=4096, n_per_class=100, num_workers=8, pin_memory=None):
         if pin_memory is None:
             pin_memory = torch.cuda.is_available()
         subset, class_names = self._filter_classes(FAR_CLASSES, n_per_class)
@@ -66,7 +66,7 @@ class CIFAR100Unknowns:
         )
         return loader, class_names
 
-    def get_all_unknowns_loader(self, batch_size=1024, n_per_class=100, num_workers=8, pin_memory=None):
+    def get_all_unknowns_loader(self, batch_size=4096, n_per_class=100, num_workers=8, pin_memory=None):
         if pin_memory is None:
             pin_memory = torch.cuda.is_available()
         all_classes = {**NEAR_CLASSES, **FAR_CLASSES}

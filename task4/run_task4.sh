@@ -11,6 +11,13 @@ set -euo pipefail
 
 DATA_ROOT="${1:-./data/cifar}"
 OUTPUT_DIR="${2:-task4/results}"
+BATCH_SIZE="${3:-}"
+
+EXTRA_ARGS=""
+if [ -n "$BATCH_SIZE" ]; then
+    EXTRA_ARGS="--batch_size $BATCH_SIZE"
+    echo " Batch size override: ${BATCH_SIZE}"
+fi
 
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$DATA_ROOT"
@@ -28,15 +35,15 @@ python utilities/download_cifar.py --dest "${DATA_ROOT}"
 
 # 2. Train Vanilla ResNet-18
 echo -e "\n[Step 2/5] Training Vanilla ResNet-18..."
-python task4/train.py --config task4/configs/vanilla.yaml --data_root "${DATA_ROOT}"
+python task4/train.py --config task4/configs/vanilla.yaml --data_root "${DATA_ROOT}" ${EXTRA_ARGS}
 
 # 3. Train GCSC (Gaussian Center-based Spherical Classifier)
 echo -e "\n[Step 3/5] Training GCSC..."
-python task4/train.py --config task4/configs/gcsc.yaml --data_root "${DATA_ROOT}"
+python task4/train.py --config task4/configs/gcsc.yaml --data_root "${DATA_ROOT}" ${EXTRA_ARGS}
 
 # 4. Train PROSER (Learning Placeholders for Open-Set Recognition)
 echo -e "\n[Step 4/5] Training PROSER..."
-python task4/train.py --config task4/configs/proser.yaml --data_root "${DATA_ROOT}"
+python task4/train.py --config task4/configs/proser.yaml --data_root "${DATA_ROOT}" ${EXTRA_ARGS}
 
 # 5. Extract penultimate features & logits
 echo -e "\n[Step 5/5 Part A] Extracting penultimate features and logits..."

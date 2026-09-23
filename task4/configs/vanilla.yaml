@@ -2,9 +2,10 @@ method: vanilla
 seed: 6304
 data_root: ./data/cifar
 output_dir: task4/results
-batch_size: 512
-eval_batch_size: 1024
-num_workers: 8
+batch_size: 2048
+eval_batch_size: 4096
+num_workers: 16
+warmup_epochs: 5
 lr: 0.1
 base_batch_size: 128
 scale_lr: true

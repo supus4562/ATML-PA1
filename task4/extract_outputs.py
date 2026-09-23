@@ -44,8 +44,8 @@ def extract_features(model, loader, device, desc="Extracting"):
 def main():
     parser = argparse.ArgumentParser(description="Task 4 — Extract features and logits")
     parser.add_argument('--data_root', required=True, help="Path to CIFAR data")
-    parser.add_argument('--batch_size', type=int, default=1024, help="Inference batch size (optimized for 80GB VRAM)")
-    parser.add_argument('--num_workers', type=int, default=8, help="Dataloader workers")
+    parser.add_argument('--batch_size', type=int, default=4096, help="Inference batch size (optimized for 80GB VRAM)")
+    parser.add_argument('--num_workers', type=int, default=12, help="Dataloader workers")
     parser.add_argument('--vanilla_ckpt', default='task4/results/vanilla_checkpoint.pth')
     parser.add_argument('--gcsc_ckpt', default='task4/results/gcsc_checkpoint.pth')
     parser.add_argument('--proser_ckpt', default='task4/results/proser_checkpoint.pth')

@@ -41,6 +41,8 @@ def main():
     parser.add_argument('--config', required=True, help="Path to YAML config")
     parser.add_argument('--data_root', required=True, help="Path to CIFAR data root")
     parser.add_argument('--batch_size', type=int, default=None, help="Override batch size")
+    parser.add_argument('--eval_batch_size', type=int, default=None, help="Override evaluation batch size")
+    parser.add_argument('--warmup_epochs', type=int, default=None, help="Override warmup epochs")
     parser.add_argument('--epochs', type=int, default=None, help="Override number of epochs")
     parser.add_argument('--lr', type=float, default=None, help="Override learning rate")
     parser.add_argument('--num_workers', type=int, default=None, help="Override num workers")
@@ -54,6 +56,10 @@ def main():
         config['data_root'] = args.data_root
     if args.batch_size is not None:
         config['batch_size'] = args.batch_size
+    if args.eval_batch_size is not None:
+        config['eval_batch_size'] = args.eval_batch_size
+    if args.warmup_epochs is not None:
+        config['warmup_epochs'] = args.warmup_epochs
     if args.epochs is not None:
         config['n_epochs'] = args.epochs
     if args.lr is not None:
@@ -85,15 +91,17 @@ def main():
     num_workers = config.get('num_workers', 8)
     pin_memory = (device.type == "cuda")
     
+    eval_batch_size = config.get('eval_batch_size', 4096)
     train_loader, val_loader = get_train_val_loaders(
         args.data_root, val_fraction=config['val_fraction'], seed=config['seed'], 
-        batch_size=config['batch_size'], randaugment=randaugment, 
+        batch_size=config['batch_size'], eval_batch_size=eval_batch_size,
+        randaugment=randaugment, 
         ra_ops=config.get('randaugment_ops', 2), ra_mag=config.get('randaugment_mag', 9),
         num_workers=num_workers, pin_memory=pin_memory
     )
     
     method = config['method']
-    tqdm.write(f"[task4/train] Starting {method.upper()} on {device} (batch_size={config['batch_size']}, workers={num_workers})")
+    tqdm.write(f"[task4/train] Starting {method.upper()} on {device} (train_bs={config['batch_size']}, eval_bs={eval_batch_size}, workers={num_workers})")
     
     if method == 'vanilla':
         trainer = VanillaTrainer(config, device)
