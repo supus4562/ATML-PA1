@@ -5,7 +5,7 @@ batch_size: 1024
 num_workers: 8
 
 subset:
-  n_per_class: 50
+  total_test_images: 500
 
 training:
   lr: 1.0e-3
@@ -17,11 +17,8 @@ training:
 cue_conflicts:
   n_pairs: 5
   target_total: 200
-  style_weight: 1000000.0
-  content_weight: 1.0
-  n_steps: 300
-  lr: 0.01
-  batch_size: 128
+  style_strength: 0.85
+  batch_size: 32
 
 translation:
   displacements: [0, 8, 16, 32]

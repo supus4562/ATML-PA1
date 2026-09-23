@@ -64,7 +64,7 @@ def evaluate_color_bias(model, clean_pil_images, labels, config):
 
 def evaluate_cue_conflicts(model, conflicts, config):
     if not conflicts:
-        return {'shape_bias': 0.0, 'coverage': 0.0}
+        return {'shape_bias': 0.0, 'coverage': 0.0, 'n_shape': 0, 'n_texture': 0, 'n_other': 0, 'n_total': 0}
 
     transform = getattr(model, 'get_transform', lambda: model.transform)()
     kw = _dl_kwargs(config)
@@ -76,18 +76,27 @@ def evaluate_cue_conflicts(model, conflicts, config):
     imgs   = [c['stylized_pil'] for c in conflicts]
     preds, _, _ = model.predict(DataLoader(PILDataset(imgs, [0]*len(imgs), transform), **kw))
 
-    n_shape = n_texture = 0
+    n_shape = n_texture = n_other = 0
     for i, p in enumerate(preds):
-        pred_class = classes[p]
+        pred_class = classes[p] if classes is not None and p < len(classes) else str(p)
         if pred_class == conflicts[i]['content_class']:
             n_shape += 1
         elif pred_class == conflicts[i]['style_class']:
             n_texture += 1
+        else:
+            n_other += 1
 
     total = n_shape + n_texture
     shape_bias = (n_shape / total * 100) if total > 0 else 0.0
     coverage   = (total / len(conflicts) * 100)
-    return {'shape_bias': float(shape_bias), 'coverage': float(coverage)}
+    return {
+        'shape_bias': float(shape_bias),
+        'coverage':   float(coverage),
+        'n_shape':    int(n_shape),
+        'n_texture':  int(n_texture),
+        'n_other':    int(n_other),
+        'n_total':    len(conflicts),
+    }
 
 def evaluate_translation(model, clean_pil_images, labels, config):
     transform = getattr(model, 'get_transform', lambda: model.transform)()
@@ -122,23 +131,28 @@ def evaluate_translation(model, clean_pil_images, labels, config):
 
     return results
 
-def evaluate_patch_shuffle(model, clean_pil_images, labels, config):
+def evaluate_patch_shuffle(model, clean_pil_images, labels, config, shuffled_pil_images=None):
     transform = getattr(model, 'get_transform', lambda: model.transform)()
     kw = _dl_kwargs(config)
 
-    np.random.seed(config.get('seed', 6304))
-    perm = np.random.permutation(16).tolist()
+    clean_preds, _, _ = model.predict(DataLoader(PILDataset(clean_pil_images, labels, transform), **kw))
+
+    if shuffled_pil_images is None:
+        seed = config.get('seed', 6304)
+        shuffled_pil_images = []
+        for idx, img in enumerate(clean_pil_images):
+            rng = np.random.RandomState(seed + idx)
+            perm = rng.permutation(16).tolist()
+            while perm == list(range(16)):
+                perm = rng.permutation(16).tolist()
+            shuffled_pil_images.append(apply_patch_shuffle(img, perm))
 
     out_dir = os.path.join(config.get("output_dir", "task1/results"), "report_images")
     os.makedirs(out_dir, exist_ok=True)
+    for i in range(min(5, len(shuffled_pil_images))):
+        shuffled_pil_images[i].save(os.path.join(out_dir, f"patch_shuffle_{i}.jpg"))
 
-    clean_preds, _, _ = model.predict(DataLoader(PILDataset(clean_pil_images, labels, transform), **kw))
-
-    shuffled = [apply_patch_shuffle(img, perm) for img in clean_pil_images]
-    for i in range(min(5, len(shuffled))):
-        shuffled[i].save(os.path.join(out_dir, f"patch_shuffle_{i}.jpg"))
-
-    preds, _, _ = model.predict(DataLoader(PILDataset(shuffled, labels, transform), **kw))
+    preds, _, _ = model.predict(DataLoader(PILDataset(shuffled_pil_images, labels, transform), **kw))
 
     return {
         'acc':         float(accuracy_score(labels, preds)),

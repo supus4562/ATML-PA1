@@ -177,7 +177,8 @@ class CLIPZeroShot:
                 image_features = self.model.encode_image(imgs)
                 image_features /= image_features.norm(dim=-1, keepdim=True)
                 
-                similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+                logit_scale = getattr(self.model, 'logit_scale', torch.tensor(4.6052)).exp()
+                similarity = (logit_scale * image_features @ text_features.T).softmax(dim=-1)
                 all_probs.append(similarity.cpu().numpy())
                 all_preds.append(similarity.argmax(dim=-1).cpu().numpy())
                 if labels is not None:

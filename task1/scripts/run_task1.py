@@ -70,6 +70,18 @@ class IndexDataset(torch.utils.data.Dataset):
         return self.transform(img), label
 
 
+class SubsetWithTransform(torch.utils.data.Dataset):
+    """Wraps a subset of a dataset by indices and applies a transform."""
+    def __init__(self, ds, indices, transform):
+        self.ds = ds
+        self.indices = indices
+        self.transform = transform
+    def __len__(self): return len(self.indices)
+    def __getitem__(self, i):
+        img, label = self.ds[self.indices[i]]
+        return self.transform(img), label
+
+
 # ── Plotting helpers ──────────────────────────────────────────────────────────
 
 def plot_clean_baseline(metrics: dict, out_dir: str) -> None:
@@ -296,17 +308,35 @@ def main() -> None:
 
     # ── Datasets ──────────────────────────────────────────────────────────────
     print("[task1] Downloading / loading Oxford-IIIT Pet ...")
-    train_dataset = OxfordIIITPet(root=config["data_root"], split="trainval", download=True)
-    test_dataset  = OxfordIIITPet(root=config["data_root"], split="test",  download=True)
+    trainval_dataset = OxfordIIITPet(root=config["data_root"], split="trainval", download=True)
+    test_dataset     = OxfordIIITPet(root=config["data_root"], split="test",     download=True)
 
-    config["classes"] = train_dataset.classes
-    config["training"]["classes"] = train_dataset.classes
+    config["classes"] = trainval_dataset.classes
+    config["training"]["classes"] = trainval_dataset.classes
+
+    # Stratified 80/20 train/val split from official training partition using seed 6304
+    from sklearn.model_selection import train_test_split
+    targets_trainval = np.array(
+        trainval_dataset._labels if hasattr(trainval_dataset, '_labels') else trainval_dataset.targets
+    )
+    train_indices, val_indices = train_test_split(
+        np.arange(len(targets_trainval)),
+        test_size=0.20,
+        random_state=config["seed"],
+        stratify=targets_trainval
+    )
+    print(f"[task1] Created stratified 80/20 split: {len(train_indices)} train, {len(val_indices)} val")
+
+    # Select class-balanced subset of 500 official test images using seed 6304
     subset_indices = make_balanced_subset(
-        test_dataset, config["subset"]["n_per_class"], config["seed"]
+        test_dataset,
+        total_samples=config["subset"].get("total_test_images", 500),
+        n_per_class=config["subset"].get("n_per_class", None),
+        seed=config["seed"]
     )
 
     # Build shared 500 PIL images at 224×224 BEFORE any model normalization
-    print("[task1] Building evaluation subset (500 images) ...")
+    print(f"[task1] Building evaluation subset ({len(subset_indices)} images) ...")
     clean_pil_images: list[Image.Image] = []
     labels: list[int] = []
     for idx in subset_indices:
@@ -316,7 +346,17 @@ def main() -> None:
         labels.append(label)
     labels_arr = np.array(labels)
 
-    # ── Step 3 prep: cue conflicts (slow — done once for all models) ───────────
+    # Pre-generate per-image patch-shuffled images (non-identity per image, seed 6304)
+    print("[task1] Pre-generating per-image patch permutations (seed 6304) ...")
+    patch_shuffled_images: list[Image.Image] = []
+    for idx, img in enumerate(clean_pil_images):
+        rng = np.random.RandomState(config["seed"] + idx)
+        perm = rng.permutation(16).tolist()
+        while perm == list(range(16)):
+            perm = rng.permutation(16).tolist()
+        patch_shuffled_images.append(apply_patch_shuffle(img, perm))
+
+    # ── Step 3 prep: cue conflicts (done once for all models) ───────────────────
     print("[task1] Generating AdaIN cue conflicts ...")
     pairs = [
         ("Abyssinian", "Bengal"), ("Beagle", "Boxer"), ("Chihuahua", "Pug"),
@@ -329,10 +369,18 @@ def main() -> None:
     
     # Save the generated images to disk so the user can use them in the report
     cc_img_dir = os.path.join(config["output_dir"], "cue_conflict_images")
+    report_img_dir = os.path.join(config["output_dir"], "report_images")
     os.makedirs(cc_img_dir, exist_ok=True)
+    os.makedirs(report_img_dir, exist_ok=True)
     for i, c in enumerate(conflicts):
         img_name = f"{c['content_class']}_shape_{c['style_class']}_texture_{i}.jpg"
         c['stylized_pil'].save(os.path.join(cc_img_dir, img_name))
+        if i < 10:
+            c['stylized_pil'].save(os.path.join(report_img_dir, f"cue_conflict_{img_name}"))
+            c_orig, _ = test_dataset[c['content_idx']]
+            c_orig.resize((224, 224), Image.BILINEAR).save(
+                os.path.join(report_img_dir, f"cue_conflict_content_{c['content_class']}_{i}.jpg")
+            )
 
     # ── Metrics storage ────────────────────────────────────────────────────────
     metrics: dict = {
@@ -361,8 +409,8 @@ def main() -> None:
         ])
         val_transform = T.Compose([T.Resize((224, 224)), T.CenterCrop(224), transform])
 
-        train_ds = IndexDataset(train_dataset, train_transform)
-        val_ds   = IndexDataset(test_dataset,  val_transform)
+        train_ds = SubsetWithTransform(trainval_dataset, train_indices, train_transform)
+        val_ds   = SubsetWithTransform(trainval_dataset, val_indices,   val_transform)
         train_loader = DataLoader(train_ds, batch_size=train_bs,
                       shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
         val_loader   = DataLoader(val_ds,   batch_size=train_bs,
@@ -374,7 +422,7 @@ def main() -> None:
         if model_name == "CLIP":
             print("[task1]   → CLIP zero-shot ...")
             zs = CLIPZeroShot(device)
-            PET_CLASSES = train_dataset.classes
+            PET_CLASSES = trainval_dataset.classes
             clean_ds_zs = PILDataset(clean_pil_images, labels_arr, transform)
             zs_loader   = DataLoader(clean_ds_zs, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
             zs_preds, zs_probs, zs_lbls = zs.predict(zs_loader, PET_CLASSES)
@@ -415,13 +463,11 @@ def main() -> None:
         # Step 5: patch shuffle
         print("[task1]   Step 5: patch shuffle ...")
         metrics["step5_patch"][model_name] = evaluate_patch_shuffle(
-            model, clean_pil_images, labels_arr, config
+            model, clean_pil_images, labels_arr, config, shuffled_pil_images=patch_shuffled_images
         )
 
         # Step 6: cosine stability for 4 transforms
         print("[task1]   Step 6: representation stability ...")
-        rng = np.random.RandomState(config["seed"])
-        perm = rng.permutation(16).tolist()
 
         # Grayscale
         gray_imgs = [apply_grayscale(img) for img in clean_pil_images]
@@ -435,9 +481,8 @@ def main() -> None:
         from task1.analysis.feature_similarity import cosine_stability
         s_gray = cosine_stability(f_clean, f_gray)
 
-        # Patch shuffle
-        patch_imgs = [apply_patch_shuffle(img, perm) for img in clean_pil_images]
-        patch_ds   = PILDataset(patch_imgs, labels_arr, transform)
+        # Patch shuffle (reusing the pre-generated patch-shuffled images)
+        patch_ds   = PILDataset(patch_shuffled_images, labels_arr, transform)
         patch_loader = DataLoader(patch_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
         f_patch, _ = model.extract_features(patch_loader)
         features_for_cka["patch"][model_name] = f_patch
@@ -459,6 +504,7 @@ def main() -> None:
             features_for_cka["translation"][model_name] = np.mean(np.stack(f_trans_list, axis=0), axis=0)
 
         # Cue conflict
+        content_idxs = []
         if conflicts:
             cc_imgs = [c["stylized_pil"] for c in conflicts]
             cc_labs = [0] * len(cc_imgs)  # dummy labels, not used for stability
@@ -484,9 +530,13 @@ def main() -> None:
             "cue_conflict":   float(s_cc),
         }
 
-        # ── t-SNE (clean + grayscale per backbone) ────────────────────────────
+        # ── t-SNE visualizations per backbone ─────────────────────────────────
         print("[task1]   t-SNE ...")
-        run_tsne(f_clean, f_gray, labels_arr, model_name, config["output_dir"], config)
+        run_tsne(f_clean, f_gray, labels_arr, model_name, config["output_dir"], config, transform_name="Grayscale")
+        run_tsne(f_clean, f_patch, labels_arr, model_name, config["output_dir"], config, transform_name="Patch Shuffle")
+        if conflicts and len(content_idxs) > 0:
+            cc_subset_labels = labels_arr[content_idxs[:len(f_cc)]]
+            run_tsne(f_clean_cc, f_cc[:len(f_clean_cc)], cc_subset_labels, model_name, config["output_dir"], config, transform_name="Cue Conflict")
 
     # ── Save all metrics to JSON ──────────────────────────────────────────────
     metrics_path = os.path.join(config["output_dir"], "all_metrics.json")
@@ -537,6 +587,29 @@ def main() -> None:
             "Stability Patch":    metrics["step6_stability"][m]["patch"],
             "Stability Trans32":  metrics["step6_stability"][m]["translation_32"],
             "Stability CC":       metrics["step6_stability"][m]["cue_conflict"],
+        })
+
+    if "step1_clip_zeroshot" in metrics and metrics["step1_clip_zeroshot"]:
+        zs = metrics["step1_clip_zeroshot"]
+        summary_rows.append({
+            "Model":              "CLIP (Zero-Shot)",
+            "Clean Acc":          zs.get("accuracy", np.nan),
+            "Clean Macro-F1":     zs.get("macro_f1", np.nan),
+            "Mean Max Conf":      zs.get("mean_max_conf", np.nan),
+            "Gray Acc":           np.nan,
+            "Gray Consistency":   np.nan,
+            "Hue Acc":            np.nan,
+            "Hue Consistency":    np.nan,
+            "Shape Bias %":       np.nan,
+            "CC Coverage %":      np.nan,
+            "Trans32 Acc":        np.nan,
+            "Trans32 Consistency":np.nan,
+            "Patch Acc":          np.nan,
+            "Patch Consistency":  np.nan,
+            "Stability Gray":     np.nan,
+            "Stability Patch":    np.nan,
+            "Stability Trans32":  np.nan,
+            "Stability CC":       np.nan,
         })
 
     df = pd.DataFrame(summary_rows)
