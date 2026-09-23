@@ -64,6 +64,42 @@ def build_decoder():
         nn.Conv2d(64, 3, (3, 3)),
     )
 
+def build_vgg_encoder():
+    """Huang & Belongie (2017) normalized VGG-19 encoder up to relu4_1 (31 layers)."""
+    return nn.Sequential(
+        nn.Conv2d(3, 3, (1, 1)),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(3, 64, (3, 3)),
+        nn.ReLU(),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(64, 64, (3, 3)),
+        nn.ReLU(),
+        nn.MaxPool2d((2, 2), (2, 2), (0, 0), ceil_mode=True),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(64, 128, (3, 3)),
+        nn.ReLU(),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(128, 128, (3, 3)),
+        nn.ReLU(),
+        nn.MaxPool2d((2, 2), (2, 2), (0, 0), ceil_mode=True),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(128, 256, (3, 3)),
+        nn.ReLU(),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(256, 256, (3, 3)),
+        nn.ReLU(),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(256, 256, (3, 3)),
+        nn.ReLU(),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(256, 256, (3, 3)),
+        nn.ReLU(),
+        nn.MaxPool2d((2, 2), (2, 2), (0, 0), ceil_mode=True),
+        nn.ReflectionPad2d((1, 1, 1, 1)),
+        nn.Conv2d(256, 512, (3, 3)),
+        nn.ReLU(),
+    )
+
 def download_weight_file(url, local_path):
     """Download pretrained weights if not already present."""
     if os.path.exists(local_path) and os.path.getsize(local_path) > 1000:
@@ -115,15 +151,13 @@ def load_adain_models(device):
         os.path.expanduser("~/.cache/torch/hub/checkpoints/vgg_normalised.pth")
     ]
     vgg_loaded = False
-    encoder = nn.Sequential()
+    encoder = build_vgg_encoder()
     for p in vgg_paths:
         if os.path.exists(p) and os.path.getsize(p) > 1000:
             try:
                 # Load custom normalized VGG features
                 sd = torch.load(p, map_location='cpu', weights_only=True)
-                vgg_full = vgg19().features[:21]
-                vgg_full.load_state_dict(sd)
-                encoder = vgg_full
+                encoder.load_state_dict(sd, strict=False)
                 vgg_loaded = True
                 print(f"[AdaIN] Loaded normalized VGG from {p}")
                 break
@@ -135,9 +169,7 @@ def load_adain_models(device):
         try:
             download_weight_file(VGG_URL, target_path)
             sd = torch.load(target_path, map_location='cpu', weights_only=True)
-            vgg_full = vgg19().features[:21]
-            vgg_full.load_state_dict(sd)
-            encoder = vgg_full
+            encoder.load_state_dict(sd, strict=False)
             vgg_loaded = True
             print(f"[AdaIN] Downloaded and loaded normalized VGG from {VGG_URL}")
         except Exception as e:
