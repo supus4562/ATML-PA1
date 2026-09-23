@@ -213,17 +213,17 @@ def visual_rejection_filter(stylized_pil: Image.Image, content_pil: Image.Image)
     """
     arr = np.array(stylized_pil)
     # Check 1: Non-blank / non-black intensity
-    if arr.mean() < 15.0:
+    if arr.mean() < 10.0:
         return False, "Too dark / black image", 0.0
-    if arr.std() < 10.0:
+    if arr.std() < 8.0:
         return False, "Low contrast / uniform image", 0.0
 
     # Check 2: Structural preservation of content shape
     ssim_val = compute_ssim(content_pil, stylized_pil)
-    if ssim_val < 0.15:
-        return False, f"Content shape obliterated (SSIM={ssim_val:.3f} < 0.15)", ssim_val
-    if ssim_val > 0.88:
-        return False, f"Style not transferred (SSIM={ssim_val:.3f} > 0.88)", ssim_val
+    if ssim_val < 0.10:
+        return False, f"Content shape obliterated (SSIM={ssim_val:.3f} < 0.10)", ssim_val
+    if ssim_val > 0.90:
+        return False, f"Style not transferred (SSIM={ssim_val:.3f} > 0.90)", ssim_val
 
     return True, "Accepted", ssim_val
 
@@ -257,10 +257,10 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
 
     class_to_idx = {name: i for i, name in enumerate(classes)}
 
-    # Target minimum 200 conflicts (e.g. 25 per directed pair across 10 directed pairs = 250)
+    # Target minimum 200 conflicts (e.g. 18 per directed pair across 16 directed pairs = 288 planned)
     target_total = int(config.get('target_total', 200))
     n_directed_pairs = len(pairs) * 2
-    per_pair_target = max(20, (target_total // n_directed_pairs) + 5)
+    per_pair_target = max(18, (target_total // n_directed_pairs) + 4)
 
     tasks = []
     for c1_name, c2_name in pairs:
@@ -271,8 +271,7 @@ def generate_cue_conflicts(dataset, subset_indices, pairs, config, device):
             c_style_idxs = class_to_indices[c_style]
             if len(c_content_idxs) == 0 or len(c_style_idxs) == 0:
                 continue
-            count = min(per_pair_target, len(c_content_idxs))
-            for i in range(count):
+            for i in range(per_pair_target):
                 content_idx = c_content_idxs[i % len(c_content_idxs)]
                 style_idx = c_style_idxs[(i * 3 + 7) % len(c_style_idxs)]
                 tasks.append((c_content, c_style, content_idx, style_idx))

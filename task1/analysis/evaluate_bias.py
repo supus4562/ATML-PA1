@@ -17,10 +17,12 @@ class PILDataset(Dataset):
         return self.transform(self.pil_images[idx]), self.labels[idx]
 
 def _dl_kwargs(config):
-    """Build DataLoader kwargs from the top-level config dict."""
+    """Build DataLoader kwargs from the top-level config dict.
+    Uses num_workers=0 for in-memory PILDataset evaluation to avoid Docker IPC deadlocks.
+    """
     return {
         'batch_size':  int(config.get('batch_size', 128)),
-        'num_workers': int(config.get('num_workers', 8)),
+        'num_workers': 0,
         'pin_memory':  torch.cuda.is_available(),
         'shuffle':     False,
     }

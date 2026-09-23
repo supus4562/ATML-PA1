@@ -303,7 +303,9 @@ def main() -> None:
     # Batch / dataloader defaults
     train_bs = config["training"].get("batch_size", config.get("batch_size", 128))
     eval_bs = config.get("batch_size", train_bs)
-    num_workers = config.get("num_workers", 8)
+    num_workers = config.get("num_workers", 4)
+    train_workers = min(4, int(num_workers))
+    eval_workers = 0  # In-memory PIL evaluation: 0 workers eliminates Docker IPC deadlock and queue hangs
     pin_memory = True if device.type == 'cuda' else False
 
     # ── Datasets ──────────────────────────────────────────────────────────────
@@ -359,8 +361,16 @@ def main() -> None:
     # ── Step 3 prep: cue conflicts (done once for all models) ───────────────────
     print("[task1] Generating AdaIN cue conflicts ...")
     pairs = [
-        ("Abyssinian", "Bengal"), ("Beagle", "Boxer"), ("Chihuahua", "Pug"),
-        ("Persian", "Siamese"), ("Samoyed", "Keeshond"),
+        # Distinct Cat Texture/Pattern Pairs
+        ("Abyssinian", "Bengal"),
+        ("Birman", "Ragdoll"),
+        ("Persian", "Siamese"),
+        ("British_Shorthair", "Egyptian_Mau"),
+        # Distinct Dog Fur/Shape Pairs
+        ("Beagle", "Boxer"),
+        ("Chihuahua", "Pug"),
+        ("Samoyed", "Keeshond"),
+        ("Saint_Bernard", "Newfoundland"),
     ]
     conflicts = generate_cue_conflicts(
         test_dataset, subset_indices, pairs, config["cue_conflicts"], device
@@ -416,9 +426,9 @@ def main() -> None:
         train_ds = SubsetWithTransform(trainval_dataset, train_indices, train_transform)
         val_ds   = SubsetWithTransform(trainval_dataset, val_indices,   val_transform)
         train_loader = DataLoader(train_ds, batch_size=train_bs,
-                      shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+                      shuffle=True, num_workers=train_workers, pin_memory=pin_memory)
         val_loader   = DataLoader(val_ds,   batch_size=train_bs,
-                      shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+                      shuffle=False, num_workers=train_workers, pin_memory=pin_memory)
 
         model.train_linear_head(train_loader, val_loader, config["training"])
 
@@ -428,7 +438,7 @@ def main() -> None:
             zs = CLIPZeroShot(device)
             PET_CLASSES = trainval_dataset.classes
             clean_ds_zs = PILDataset(clean_pil_images, labels_arr, transform)
-            zs_loader   = DataLoader(clean_ds_zs, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+            zs_loader   = DataLoader(clean_ds_zs, batch_size=eval_bs, shuffle=False, num_workers=eval_workers, pin_memory=pin_memory)
             zs_preds, zs_probs, zs_lbls = zs.predict(zs_loader, PET_CLASSES)
             from sklearn.metrics import accuracy_score, f1_score
             metrics["step1_clip_zeroshot"] = {
@@ -440,7 +450,7 @@ def main() -> None:
 
         # Build shared clean loader using this model's transform
         clean_ds     = PILDataset(clean_pil_images, labels_arr, transform)
-        clean_loader = DataLoader(clean_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+        clean_loader = DataLoader(clean_ds, batch_size=eval_bs, shuffle=False, num_workers=eval_workers, pin_memory=pin_memory)
 
         # Step 1: clean baseline
         print("[task1]   Step 1: clean baseline ...")
@@ -476,7 +486,7 @@ def main() -> None:
         # Grayscale
         gray_imgs = [apply_grayscale(img) for img in clean_pil_images]
         gray_ds   = PILDataset(gray_imgs, labels_arr, transform)
-        gray_loader = DataLoader(gray_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+        gray_loader = DataLoader(gray_ds, batch_size=eval_bs, shuffle=False, num_workers=eval_workers, pin_memory=pin_memory)
         f_clean, _ = model.extract_features(clean_loader)
         f_gray, _  = model.extract_features(gray_loader)
         features_for_cka["clean"][model_name] = f_clean
@@ -487,7 +497,7 @@ def main() -> None:
 
         # Patch shuffle (reusing the pre-generated patch-shuffled images)
         patch_ds   = PILDataset(patch_shuffled_images, labels_arr, transform)
-        patch_loader = DataLoader(patch_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+        patch_loader = DataLoader(patch_ds, batch_size=eval_bs, shuffle=False, num_workers=eval_workers, pin_memory=pin_memory)
         f_patch, _ = model.extract_features(patch_loader)
         features_for_cka["patch"][model_name] = f_patch
         s_patch = cosine_stability(f_clean, f_patch)
@@ -498,7 +508,7 @@ def main() -> None:
         for direction in ["up", "down", "left", "right"]:
             trans_imgs = [apply_translation(img, 32, direction) for img in clean_pil_images]
             trans_ds   = PILDataset(trans_imgs, labels_arr, transform)
-            trans_loader = DataLoader(trans_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+            trans_loader = DataLoader(trans_ds, batch_size=eval_bs, shuffle=False, num_workers=eval_workers, pin_memory=pin_memory)
             f_trans, _ = model.extract_features(trans_loader)
             f_trans_list.append(f_trans)
             s_trans_list.append(cosine_stability(f_clean, f_trans))
@@ -513,7 +523,7 @@ def main() -> None:
             cc_imgs = [c["stylized_pil"] for c in conflicts]
             cc_labs = [0] * len(cc_imgs)  # dummy labels, not used for stability
             cc_ds   = PILDataset(cc_imgs, cc_labs, transform)
-            cc_loader = DataLoader(cc_ds, batch_size=eval_bs, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+            cc_loader = DataLoader(cc_ds, batch_size=eval_bs, shuffle=False, num_workers=eval_workers, pin_memory=pin_memory)
             f_cc, _ = model.extract_features(cc_loader)
             subset_idx_map = {v: i for i, v in enumerate(subset_indices)}
             content_idxs = [subset_idx_map[c["content_idx"]]

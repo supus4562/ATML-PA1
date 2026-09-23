@@ -2,7 +2,7 @@ seed: 6304
 data_root: ./data/oxford-iiit-pet
 output_dir: task1/results
 batch_size: 1024
-num_workers: 8
+num_workers: 4
 
 subset:
   total_test_images: 500
@@ -15,7 +15,7 @@ training:
   batch_size: 1024
 
 cue_conflicts:
-  n_pairs: 5
+  n_pairs: 8
   target_total: 200
   style_strength: 0.85
   batch_size: 32
