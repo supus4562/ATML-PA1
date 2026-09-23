@@ -81,8 +81,11 @@ python task3/evaluate_sketch.py --pacs_root <path> --output_dir task3/results
 ```
 
 ### Task 4 — Open-Set Recognition
-```bash
-# Optional: Pre-download CIFAR-10 & CIFAR-100 via high-speed mirror (bypasses slow Toronto server)
+# Run full pipeline in one command:
+bash task4/run_task4.sh ./data/cifar task4/results
+
+# Or step-by-step:
+# 1. Optional: Pre-download CIFAR-10 & CIFAR-100 via high-speed mirror
 python utilities/download_cifar.py --dest ./data/cifar
 
 # Training (A100 80GB optimized batch_size=512; use --batch_size 128 for strict PDF baseline)
