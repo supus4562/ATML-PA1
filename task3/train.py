@@ -67,6 +67,8 @@ def main() -> None:
                         help="Override SAM rho (for design study)")
     parser.add_argument("--lambda_dg", type=float, default=None,
                         help="Override lambda_dg (for DAN-DG design study)")
+    parser.add_argument("--batch_size_per_domain", type=int, default=None,
+                        help="Override batch_size_per_domain (default: 8)")
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -78,6 +80,8 @@ def main() -> None:
         config["rho"] = args.rho
     if args.lambda_dg is not None:
         config["lambda_dg"] = args.lambda_dg
+    if args.batch_size_per_domain is not None:
+        config["batch_size_per_domain"] = args.batch_size_per_domain
 
     if not config.get("pacs_root"):
         raise ValueError("pacs_root must be set via config or --pacs_root")

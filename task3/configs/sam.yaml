@@ -6,7 +6,7 @@ checkpoint_path: task3/results/sam_checkpoint.pth
 rho: 0.05
 source_domains: [photo, art_painting, cartoon]
 n_classes: 7
-batch_size_per_domain: 64
+batch_size_per_domain: 8
 num_workers: 8
 max_epochs: 30
 patience: 5

@@ -7,7 +7,7 @@ lambda_dg: 1.0
 kernel_scales: [0.5, 1.0, 2.0]
 source_domains: [photo, art_painting, cartoon]
 n_classes: 7
-batch_size_per_domain: 64
+batch_size_per_domain: 8
 num_workers: 8
 max_epochs: 30
 patience: 5
