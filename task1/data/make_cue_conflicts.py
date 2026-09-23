@@ -131,12 +131,22 @@ def load_adain_models(device):
                 print(f"[AdaIN] Could not load {p}: {e}")
 
     if not vgg_loaded:
-        # Standard torchvision VGG-19 features up to relu4_1
+        target_path = vgg_paths[0]
         try:
-            encoder = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features[:21]
+            download_weight_file(VGG_URL, target_path)
+            sd = torch.load(target_path, map_location='cpu', weights_only=True)
+            vgg_full = vgg19().features[:21]
+            vgg_full.load_state_dict(sd)
+            encoder = vgg_full
+            vgg_loaded = True
+            print(f"[AdaIN] Downloaded and loaded normalized VGG from {VGG_URL}")
         except Exception as e:
-            print(f"[AdaIN] Falling back to unweighted VGG-19: {e}")
-            encoder = vgg19().features[:21]
+            print(f"[AdaIN] Could not download vgg_normalised ({e}), trying torchvision VGG-19 ...")
+            try:
+                encoder = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features[:21]
+            except Exception as e2:
+                print(f"[AdaIN] Falling back to unweighted VGG-19: {e2}")
+                encoder = vgg19().features[:21]
 
     for param in encoder.parameters():
         param.requires_grad = False
