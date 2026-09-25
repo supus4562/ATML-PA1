@@ -330,7 +330,7 @@
         "count": 128
       }
     ],
-    "source_separability_3class": 0.9136212624584718,
+    "source_separability_3class": 0.9169435215946844,
     "sharpness_proxy": 0.15268772840499878,
     "sketch_delta_acc": 0.04555866632730976
   }

@@ -4,8 +4,28 @@ CDAN,2,elephant,dog,195
 CDAN,3,elephant,person,172
 CDAN,4,giraffe,person,142
 CDAN,5,horse,dog,129
+DAN (λ=1),1,horse,house,166
+DAN (λ=1),2,dog,person,165
+DAN (λ=1),3,elephant,person,134
+DAN (λ=1),4,horse,dog,105
+DAN (λ=1),5,elephant,dog,92
+DAN (λ=0.1),1,dog,person,245
+DAN (λ=0.1),2,elephant,person,111
+DAN (λ=0.1),3,giraffe,horse,102
+DAN (λ=0.1),4,horse,house,102
+DAN (λ=0.1),5,giraffe,person,91
+DAN (λ=10),1,giraffe,horse,135
+DAN (λ=10),2,dog,person,119
+DAN (λ=10),3,dog,horse,102
+DAN (λ=10),4,horse,house,99
+DAN (λ=10),5,giraffe,dog,89
 DANN (α_max=1.0),1,dog,elephant,251
 DANN (α_max=1.0),2,dog,person,226
 DANN (α_max=1.0),3,horse,elephant,132
 DANN (α_max=1.0),4,horse,giraffe,113
 DANN (α_max=1.0),5,guitar,elephant,90
+Source-only (ERM),1,horse,dog,289
+Source-only (ERM),2,elephant,dog,257
+Source-only (ERM),3,giraffe,person,162
+Source-only (ERM),4,horse,elephant,143
+Source-only (ERM),5,dog,elephant,142

@@ -48,7 +48,164 @@
         "pred": "dog",
         "count": 129
       }
-    ]
+    ],
+    "target_delta_acc": 0.054721303130567556
+  },
+  "dan": {
+    "photo_val_acc": 0.9700598802395209,
+    "photo_val_f1": 0.9643253708970555,
+    "art_painting_val_acc": 0.9414634146341463,
+    "art_painting_val_f1": 0.9393922081503879,
+    "cartoon_val_acc": 0.9402985074626866,
+    "cartoon_val_f1": 0.9423363971295702,
+    "mean_source_val_acc": 0.9506072674454513,
+    "worst_source_val_acc": 0.9402985074626866,
+    "mean_source_val_f1": 0.9486846587256711,
+    "worst_source_val_f1": 0.9393922081503879,
+    "target_acc": 0.6815983710867906,
+    "target_f1": 0.6316635798801978,
+    "domain_separability": 0.8928571428571429,
+    "per_class_target_acc": [
+      0.6126943005181347,
+      0.5972972972972973,
+      0.6918990703851262,
+      0.9457236842105263,
+      0.5759803921568627,
+      1.0,
+      0.73125
+    ],
+    "top_confusions": [
+      {
+        "true": "horse",
+        "pred": "house",
+        "count": 166
+      },
+      {
+        "true": "dog",
+        "pred": "person",
+        "count": 165
+      },
+      {
+        "true": "elephant",
+        "pred": "person",
+        "count": 134
+      },
+      {
+        "true": "horse",
+        "pred": "dog",
+        "count": 105
+      },
+      {
+        "true": "elephant",
+        "pred": "dog",
+        "count": 92
+      }
+    ],
+    "target_delta_acc": 0.12013234919826932
+  },
+  "dan_lmmd0.1": {
+    "photo_val_acc": 0.9820359281437125,
+    "photo_val_f1": 0.9782595603733816,
+    "art_painting_val_acc": 0.9365853658536586,
+    "art_painting_val_f1": 0.9385291103884488,
+    "cartoon_val_acc": 0.9573560767590619,
+    "cartoon_val_f1": 0.9620717446090106,
+    "mean_source_val_acc": 0.9586591235854778,
+    "worst_source_val_acc": 0.9365853658536586,
+    "mean_source_val_f1": 0.959620138456947,
+    "worst_source_val_f1": 0.9385291103884488,
+    "target_acc": 0.6833799949096462,
+    "target_f1": 0.6325349433777635,
+    "domain_separability": 0.967032967032967,
+    "per_class_target_acc": [
+      0.43523316062176165,
+      0.7175675675675676,
+      0.6215139442231076,
+      0.9292763157894737,
+      0.7205882352941176,
+      1.0,
+      0.73125
+    ],
+    "top_confusions": [
+      {
+        "true": "dog",
+        "pred": "person",
+        "count": 245
+      },
+      {
+        "true": "elephant",
+        "pred": "person",
+        "count": 111
+      },
+      {
+        "true": "giraffe",
+        "pred": "horse",
+        "count": 102
+      },
+      {
+        "true": "horse",
+        "pred": "house",
+        "count": 102
+      },
+      {
+        "true": "giraffe",
+        "pred": "person",
+        "count": 91
+      }
+    ],
+    "target_delta_acc": 0.12191397302112494
+  },
+  "dan_lmmd10.0": {
+    "photo_val_acc": 0.9640718562874252,
+    "photo_val_f1": 0.9577006981605202,
+    "art_painting_val_acc": 0.9341463414634147,
+    "art_painting_val_f1": 0.9313357064999102,
+    "cartoon_val_acc": 0.9424307036247335,
+    "cartoon_val_f1": 0.9481264002701096,
+    "mean_source_val_acc": 0.946882967125191,
+    "worst_source_val_acc": 0.9341463414634147,
+    "mean_source_val_f1": 0.9457209349768467,
+    "worst_source_val_f1": 0.9313357064999102,
+    "target_acc": 0.7093407991855434,
+    "target_f1": 0.6585852843304879,
+    "domain_separability": 0.8818681318681318,
+    "per_class_target_acc": [
+      0.538860103626943,
+      0.7445945945945946,
+      0.5816733067729084,
+      0.9046052631578947,
+      0.7634803921568627,
+      1.0,
+      0.80625
+    ],
+    "top_confusions": [
+      {
+        "true": "giraffe",
+        "pred": "horse",
+        "count": 135
+      },
+      {
+        "true": "dog",
+        "pred": "person",
+        "count": 119
+      },
+      {
+        "true": "dog",
+        "pred": "horse",
+        "count": 102
+      },
+      {
+        "true": "horse",
+        "pred": "house",
+        "count": 99
+      },
+      {
+        "true": "giraffe",
+        "pred": "dog",
+        "count": 89
+      }
+    ],
+    "target_delta_acc": 0.14787477729702214
   },
   "dann": {
     "photo_val_acc": 0.9760479041916168,
@@ -99,6 +256,59 @@
         "pred": "elephant",
         "count": 90
       }
-    ]
+    ],
+    "target_delta_acc": 0.06668363451259862
+  },
+  "source_only": {
+    "photo_val_acc": 0.9820359281437125,
+    "photo_val_f1": 0.9782989099254159,
+    "art_painting_val_acc": 0.9243902439024391,
+    "art_painting_val_f1": 0.9271977041431075,
+    "cartoon_val_acc": 0.9509594882729211,
+    "cartoon_val_f1": 0.9550181642711335,
+    "mean_source_val_acc": 0.9524618867730243,
+    "worst_source_val_acc": 0.9243902439024391,
+    "mean_source_val_f1": 0.953504926113219,
+    "worst_source_val_f1": 0.9271977041431075,
+    "target_acc": 0.5614660218885212,
+    "target_f1": 0.5237719409004364,
+    "domain_separability": 0.9986263736263736,
+    "per_class_target_acc": [
+      0.6696891191709845,
+      0.6135135135135135,
+      0.4900398406374502,
+      0.7549342105263158,
+      0.3492647058823529,
+      0.1875,
+      0.66875
+    ],
+    "top_confusions": [
+      {
+        "true": "horse",
+        "pred": "dog",
+        "count": 289
+      },
+      {
+        "true": "elephant",
+        "pred": "dog",
+        "count": 257
+      },
+      {
+        "true": "giraffe",
+        "pred": "person",
+        "count": 162
+      },
+      {
+        "true": "horse",
+        "pred": "elephant",
+        "count": 143
+      },
+      {
+        "true": "dog",
+        "pred": "elephant",
+        "count": 142
+      }
+    ],
+    "target_delta_acc": 0.0
   }
 }
