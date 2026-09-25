@@ -1,4 +1,4 @@
 defaults: [base]
 method: dann
-lr: 1.0e-5
+lr: 2.0e-5
 checkpoint_path: task2/results/dann_checkpoint.pth
