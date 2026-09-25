@@ -1,58 +1,104 @@
 {
   "cdan": {
-    "photo_val_acc": 0.9640718562874252,
-    "photo_val_f1": 0.9572317144363103,
-    "art_painting_val_acc": 0.9365853658536586,
-    "art_painting_val_f1": 0.9364360263415745,
-    "cartoon_val_acc": 0.9573560767590619,
-    "cartoon_val_f1": 0.9613028574715338,
-    "mean_source_val_acc": 0.9526710996333819,
-    "mean_source_val_f1": 0.9516568660831396,
-    "target_acc": 0.7716976329854925,
-    "target_f1": 0.7679544558238679,
-    "domain_separability": 0.9986263736263736,
-    "target_delta_acc": 0.2102316110969713
-  },
-  "dan": {
-    "photo_val_acc": 0.9700598802395209,
-    "photo_val_f1": 0.9643253708970555,
-    "art_painting_val_acc": 0.9414634146341463,
-    "art_painting_val_f1": 0.9393922081503879,
-    "cartoon_val_acc": 0.9402985074626866,
-    "cartoon_val_f1": 0.9423363971295702,
-    "mean_source_val_acc": 0.9506072674454513,
-    "mean_source_val_f1": 0.9486846587256711,
-    "target_acc": 0.6815983710867906,
-    "target_f1": 0.6316635798801978,
-    "domain_separability": 0.8914835164835165,
-    "target_delta_acc": 0.12013234919826932
+    "photo_val_acc": 0.9670658682634731,
+    "photo_val_f1": 0.9619266684499461,
+    "art_painting_val_acc": 0.9195121951219513,
+    "art_painting_val_f1": 0.9172351371248438,
+    "cartoon_val_acc": 0.929637526652452,
+    "cartoon_val_f1": 0.9353932787119392,
+    "mean_source_val_acc": 0.9387385300126255,
+    "worst_source_val_acc": 0.9195121951219513,
+    "mean_source_val_f1": 0.9381850280955764,
+    "worst_source_val_f1": 0.9172351371248438,
+    "target_acc": 0.6161873250190888,
+    "target_f1": 0.6501093980446487,
+    "domain_separability": 0.9972527472527473,
+    "per_class_target_acc": [
+      0.4948186528497409,
+      0.4837837837837838,
+      0.6095617529880478,
+      0.8898026315789473,
+      0.5588235294117647,
+      0.95,
+      0.93125
+    ],
+    "top_confusions": [
+      {
+        "true": "dog",
+        "pred": "person",
+        "count": 245
+      },
+      {
+        "true": "elephant",
+        "pred": "dog",
+        "count": 195
+      },
+      {
+        "true": "elephant",
+        "pred": "person",
+        "count": 172
+      },
+      {
+        "true": "giraffe",
+        "pred": "person",
+        "count": 142
+      },
+      {
+        "true": "horse",
+        "pred": "dog",
+        "count": 129
+      }
+    ]
   },
   "dann": {
-    "photo_val_acc": 0.9730538922155688,
-    "photo_val_f1": 0.9699270117013431,
-    "art_painting_val_acc": 0.9414634146341463,
-    "art_painting_val_f1": 0.9437309561864371,
-    "cartoon_val_acc": 0.9552238805970149,
-    "cartoon_val_f1": 0.9601147461679714,
-    "mean_source_val_acc": 0.9565803958155766,
-    "mean_source_val_f1": 0.9579242380185838,
-    "target_acc": 0.4232629167727157,
-    "target_f1": 0.4414366847810577,
-    "domain_separability": 1.0,
-    "target_delta_acc": -0.13820310511580552
-  },
-  "source_only": {
-    "photo_val_acc": 0.9820359281437125,
-    "photo_val_f1": 0.9782989099254159,
-    "art_painting_val_acc": 0.9243902439024391,
-    "art_painting_val_f1": 0.9271977041431075,
-    "cartoon_val_acc": 0.9509594882729211,
-    "cartoon_val_f1": 0.9550181642711335,
-    "mean_source_val_acc": 0.9524618867730243,
-    "mean_source_val_f1": 0.953504926113219,
-    "target_acc": 0.5614660218885212,
-    "target_f1": 0.5237719409004364,
+    "photo_val_acc": 0.9760479041916168,
+    "photo_val_f1": 0.9729319954476952,
+    "art_painting_val_acc": 0.9219512195121952,
+    "art_painting_val_f1": 0.9215022855273168,
+    "cartoon_val_acc": 0.9339019189765458,
+    "cartoon_val_f1": 0.9394051543934573,
+    "mean_source_val_acc": 0.9439670142267861,
+    "worst_source_val_acc": 0.9219512195121952,
+    "mean_source_val_f1": 0.9446131451228231,
+    "worst_source_val_f1": 0.9215022855273168,
+    "target_acc": 0.6281496564011199,
+    "target_f1": 0.6295667088500103,
     "domain_separability": 0.9986263736263736,
-    "target_delta_acc": 0.0
+    "per_class_target_acc": [
+      0.16839378238341968,
+      0.8972972972972973,
+      0.7118193891102258,
+      0.7088815789473685,
+      0.5919117647058824,
+      0.925,
+      0.9375
+    ],
+    "top_confusions": [
+      {
+        "true": "dog",
+        "pred": "elephant",
+        "count": 251
+      },
+      {
+        "true": "dog",
+        "pred": "person",
+        "count": 226
+      },
+      {
+        "true": "horse",
+        "pred": "elephant",
+        "count": 132
+      },
+      {
+        "true": "horse",
+        "pred": "giraffe",
+        "count": 113
+      },
+      {
+        "true": "guitar",
+        "pred": "elephant",
+        "count": 90
+      }
+    ]
   }
 }

@@ -1,0 +1,11 @@
+method,rank,true_class,pred_class,count
+CDAN,1,dog,person,245
+CDAN,2,elephant,dog,195
+CDAN,3,elephant,person,172
+CDAN,4,giraffe,person,142
+CDAN,5,horse,dog,129
+DANN (α_max=1.0),1,dog,elephant,251
+DANN (α_max=1.0),2,dog,person,226
+DANN (α_max=1.0),3,horse,elephant,132
+DANN (α_max=1.0),4,horse,giraffe,113
+DANN (α_max=1.0),5,guitar,elephant,90
