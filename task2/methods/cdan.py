@@ -17,15 +17,15 @@ class CDANTrainer:
         self.device = device
         self.cls_criterion = nn.CrossEntropyLoss()
         self.dom_criterion = nn.CrossEntropyLoss()
-        self.lambda_adv = config.get("lambda_adv", 1.0)
-        all_params = (
-            list(self.backbone.parameters())
-            + list(self.classifier.parameters())
-            + list(self.discriminator.parameters())
-        )
+        self.lambda_adv = config.get("lambda_adv", 0.1)
+        # Separate optimizers: backbone+classifier vs discriminator
         self.optimizer = torch.optim.AdamW(
-            all_params,
+            list(self.backbone.parameters()) + list(self.classifier.parameters()),
             lr=config["lr"], weight_decay=config["weight_decay"],
+        )
+        self.disc_optimizer = torch.optim.AdamW(
+            list(self.discriminator.parameters()),
+            lr=config.get("disc_lr", config["lr"]), weight_decay=config["weight_decay"],
         )
 
     def train(self, source_loaders, target_loader, val_loaders):
@@ -75,7 +75,26 @@ class CDANTrainer:
                     torch.ones(tx.size(0), dtype=torch.long),
                 ]).to(self.device)
 
-                # ── Single-pass forward with GRL (no detachment of f or p) ──
+                # ── Step 1: train discriminator on detached CDAN features ─────
+                with torch.no_grad():
+                    s_feat_d = self.backbone(sx)
+                    t_feat_d = self.backbone(tx)
+                    s_log_d  = self.classifier(s_feat_d)
+                    t_log_d  = self.classifier(t_feat_d)
+                    s_prob_d = torch.softmax(s_log_d, dim=1)
+                    t_prob_d = torch.softmax(t_log_d, dim=1)
+                    s_comb_d = torch.bmm(s_feat_d.unsqueeze(2), s_prob_d.unsqueeze(1)).view(s_feat_d.size(0), -1)
+                    t_comb_d = torch.bmm(t_feat_d.unsqueeze(2), t_prob_d.unsqueeze(1)).view(t_feat_d.size(0), -1)
+                    feat_d   = torch.cat([s_comb_d, t_comb_d], dim=0)
+                dom_logits_d = self.discriminator.net(feat_d)  # bypass GRL
+                dom_loss_disc = self.dom_criterion(dom_logits_d, dom_labels)
+                self.disc_optimizer.zero_grad()
+                dom_loss_disc.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    self.discriminator.parameters(), max_norm=5.0)
+                self.disc_optimizer.step()
+
+                # ── Step 2: train backbone+classifier with adversarial reversal ─
                 s_feat  = self.backbone(sx)
                 t_feat  = self.backbone(tx)
                 s_logits = self.classifier(s_feat)
@@ -92,16 +111,14 @@ class CDANTrainer:
                 self.optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(
-                    list(self.backbone.parameters())
-                    + list(self.classifier.parameters())
-                    + list(self.discriminator.parameters()),
+                    list(self.backbone.parameters()) + list(self.classifier.parameters()),
                     max_norm=5.0,
                 )
                 self.optimizer.step()
 
                 total_loss  += cls_loss.item()
-                total_align += dom_loss_adv.item()
-                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss_adv.item():.4f}", alpha=f"{alpha:.3f}")
+                total_align += dom_loss_disc.item()
+                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss_disc.item():.4f}", alpha=f"{alpha:.3f}")
 
             avg_loss  = total_loss  / iters
             avg_align = total_align / iters

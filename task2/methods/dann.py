@@ -17,15 +17,15 @@ class DANNTrainer:
         self.device = device
         self.cls_criterion = nn.CrossEntropyLoss()
         self.dom_criterion = nn.CrossEntropyLoss()
-        self.lambda_adv = config.get("lambda_adv", 1.0)
-        all_params = (
-            list(self.backbone.parameters())
-            + list(self.classifier.parameters())
-            + list(self.discriminator.parameters())
-        )
+        self.lambda_adv = config.get("lambda_adv", 0.1)
+        # Separate optimizers: backbone+classifier vs discriminator
         self.optimizer = torch.optim.AdamW(
-            all_params,
+            list(self.backbone.parameters()) + list(self.classifier.parameters()),
             lr=config["lr"], weight_decay=config["weight_decay"],
+        )
+        self.disc_optimizer = torch.optim.AdamW(
+            list(self.discriminator.parameters()),
+            lr=config.get("disc_lr", config["lr"]), weight_decay=config["weight_decay"],
         )
 
     def train(self, source_loaders, target_loader, val_loaders):
@@ -51,8 +51,7 @@ class DANNTrainer:
             batch_bar = tqdm(range(iters), desc="  batches", leave=False, unit="batch")
             for _ in batch_bar:
                 p = current_step / total_steps
-                max_alpha = self.config.get("max_alpha", 1.0)
-                alpha = (2.0 / (1.0 + math.exp(-10 * p)) - 1.0) * max_alpha
+                alpha = 2.0 / (1.0 + math.exp(-10 * p)) - 1.0
                 current_step += 1
                 batch_x, batch_y = [], []
                 for i, (siter, dl) in enumerate(zip(source_iters, source_loaders)):
@@ -76,30 +75,39 @@ class DANNTrainer:
                     torch.ones(tx.size(0), dtype=torch.long),
                 ]).to(self.device)
 
-                # ── Single-pass forward with GRL (no feature detachment) ─────
+                # ── Step 1: train discriminator on detached features ──────────
+                with torch.no_grad():
+                    s_feat_d = self.backbone(sx)
+                    t_feat_d = self.backbone(tx)
+                feat_d = torch.cat([s_feat_d, t_feat_d], dim=0)
+                dom_logits_d = self.discriminator.net(feat_d)  # bypass GRL
+                dom_loss_disc = self.dom_criterion(dom_logits_d, dom_labels)
+                self.disc_optimizer.zero_grad()
+                dom_loss_disc.backward()
+                torch.nn.utils.clip_grad_norm_(
+                    self.discriminator.parameters(), max_norm=5.0)
+                self.disc_optimizer.step()
+
+                # ── Step 2: train backbone+classifier with adversarial reversal ─
                 s_feat = self.backbone(sx)
                 t_feat = self.backbone(tx)
                 logits = self.classifier(s_feat)
                 cls_loss = self.cls_criterion(logits, sy)
-
-                feat = torch.cat([s_feat, t_feat], dim=0)
-                dom_logits = self.discriminator(feat, alpha)  # GRL active
-                dom_loss = self.dom_criterion(dom_logits, dom_labels)
-
-                loss = cls_loss + self.lambda_adv * dom_loss
+                feat_adv = torch.cat([s_feat, t_feat], dim=0)
+                dom_logits_adv = self.discriminator(feat_adv, alpha)  # GRL active
+                dom_loss_adv = self.dom_criterion(dom_logits_adv, dom_labels)
+                loss = cls_loss + self.lambda_adv * dom_loss_adv
                 self.optimizer.zero_grad()
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(
-                    list(self.backbone.parameters())
-                    + list(self.classifier.parameters())
-                    + list(self.discriminator.parameters()),
+                    list(self.backbone.parameters()) + list(self.classifier.parameters()),
                     max_norm=5.0,
                 )
                 self.optimizer.step()
 
                 total_loss  += cls_loss.item()
-                total_align += dom_loss.item()
-                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss.item():.4f}", alpha=f"{alpha:.3f}")
+                total_align += dom_loss_disc.item()  # log actual disc loss
+                batch_bar.set_postfix(cls=f"{cls_loss.item():.4f}", dom=f"{dom_loss_disc.item():.4f}", alpha=f"{alpha:.3f}")
 
             avg_loss  = total_loss  / iters
             avg_align = total_align / iters
