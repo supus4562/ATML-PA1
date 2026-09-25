@@ -1,0 +1,31 @@
+method,rank,true_class,pred_class,count
+CDAN,1,elephant,dog,540
+CDAN,2,horse,dog,522
+CDAN,3,giraffe,dog,278
+CDAN,4,person,house,160
+CDAN,5,elephant,person,118
+DAN (λ=1),1,dog,person,189
+DAN (λ=1),2,elephant,person,137
+DAN (λ=1),3,horse,house,99
+DAN (λ=1),4,giraffe,person,65
+DAN (λ=1),5,dog,horse,62
+DAN (λ=0.1),1,dog,person,183
+DAN (λ=0.1),2,dog,elephant,125
+DAN (λ=0.1),3,horse,house,112
+DAN (λ=0.1),4,dog,horse,102
+DAN (λ=0.1),5,giraffe,person,78
+DAN (λ=10),1,dog,horse,212
+DAN (λ=10),2,giraffe,horse,198
+DAN (λ=10),3,dog,person,107
+DAN (λ=10),4,horse,house,107
+DAN (λ=10),5,elephant,person,103
+DANN (α_max=1.0),1,dog,horse,772
+DANN (α_max=1.0),2,giraffe,horse,753
+DANN (α_max=1.0),3,elephant,horse,740
+DANN (α_max=1.0),4,guitar,horse,608
+DANN (α_max=1.0),5,person,horse,160
+Source-only (ERM),1,horse,elephant,380
+Source-only (ERM),2,dog,elephant,321
+Source-only (ERM),3,dog,person,194
+Source-only (ERM),4,giraffe,elephant,192
+Source-only (ERM),5,giraffe,person,135
