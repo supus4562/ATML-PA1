@@ -155,14 +155,14 @@ def load_checkpoint(ckpt_path: str, device: torch.device):
 
     # Handle both Task 2 and Task 3 backbone key prefixes
     bb_sd = ckpt["backbone_state_dict"]
-    if any(k.startswith("features.conv1.") for k in bb_sd):
+    if any(k.startswith("features.0.") for k in bb_sd):
         mapping = {
-            "features.conv1.": "features.0.",
-            "features.bn1.":   "features.1.",
-            "features.layer1.": "features.4.",
-            "features.layer2.": "features.5.",
-            "features.layer3.": "features.6.",
-            "features.layer4.": "features.7.",
+            "features.0.": "features.conv1.",
+            "features.1.": "features.bn1.",
+            "features.4.": "features.layer1.",
+            "features.5.": "features.layer2.",
+            "features.6.": "features.layer3.",
+            "features.7.": "features.layer4.",
         }
         new_sd = {}
         for k, v in bb_sd.items():
